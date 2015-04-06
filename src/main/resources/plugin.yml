@@ -1,0 +1,18 @@
+name: Resource
+description: Find biomes in the resource world
+author: StarTux
+version: 0.1
+main: com.winthier.resource.BukkitResourcePlugin
+depend: []
+commands:
+  resource:
+    description: User interface
+    permission: resource.resource
+    usage: /<command> <biome>
+permissions:
+  resource.resource:
+    description: Use /resource
+    default: op
+  resource.admin:
+    description: Use admin subcommands
+    default: op
