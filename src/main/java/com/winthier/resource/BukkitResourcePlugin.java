@@ -250,13 +250,8 @@ public class BukkitResourcePlugin extends JavaPlugin {
                 getLogger().warning("Biome from biomes.yml not found: " + key);
                 continue;
             }
-            Object value = biomes.get(biome.name());
-            if (value instanceof Location) {
-                // Legacy
-                Location location = (Location)value;
-                coordinates.put(biome, new Coordinate(location));
-            } else {
-                ConfigurationSection section = biomes.getConfigurationSection(biome.name());
+            ConfigurationSection section = biomes.getConfigurationSection(biome.name());
+            if (section != null) {
                 int x = section.getInt(Config.X.key, 0);
                 int z = section.getInt(Config.Z.key, 0);
                 coordinates.put(biome, new Coordinate(x, z));
