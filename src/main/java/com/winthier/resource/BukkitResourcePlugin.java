@@ -155,6 +155,10 @@ public class BukkitResourcePlugin extends JavaPlugin {
             } catch (IllegalArgumentException iae) {
                 return false;
             }
+            if (!showBiomes.contains(biome) && !player.hasPermission(Config.PERM_ADMIN.key)) {
+                send(sender, "&cNo known location for %s.", camels(biome.name()));
+                return true;
+            }
             Location location = getLocation(biome);
             if (location == null) {
                 send(sender, "&cNo known location for %s.", camels(biome.name()));
