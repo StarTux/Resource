@@ -24,20 +24,16 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.json.simple.JSONValue;
 
-public class BukkitResourcePlugin extends JavaPlugin implements Listener {
+public class BukkitResourcePlugin extends JavaPlugin {
     static enum Config {
         WORLD_NAME("World"),
         CENTER("Center"),
         RADIUS("Radius"),
         SHOW_BIOMES("Biomes"),
-        KEEP_INVENTORY("KeepInventory"),
         BIOMES_PATH("biomes.yml"),
         PERM_ADMIN("resource.admin"),
         X("X"),
@@ -80,14 +76,12 @@ public class BukkitResourcePlugin extends JavaPlugin implements Listener {
     final List<Biome> showBiomes = new ArrayList<>();
     int centerX = 0, centerZ = 0;
     int radius = 1000;
-    boolean keepInventory = true;
     
     @Override
     public void onEnable() {
         saveDefaultConfig();
         loadAll();
         crawler.runTaskTimer(this, CRAWLER_INTERVAL, CRAWLER_INTERVAL);
-        getServer().getPluginManager().registerEvents(this, this);
     }
 
     @Override
@@ -232,7 +226,6 @@ public class BukkitResourcePlugin extends JavaPlugin implements Listener {
         if (center.size() >= 1) centerX = center.get(0);
         if (center.size() >= 2) centerZ = center.get(1);
         radius = getConfig().getInt(Config.RADIUS.key, radius);
-        keepInventory = getConfig().getBoolean(Config.KEEP_INVENTORY.key, keepInventory);
         showBiomes.clear();
         for (String entry : getConfig().getStringList(Config.SHOW_BIOMES.key)) {
             Biome biome;
@@ -368,14 +361,5 @@ public class BukkitResourcePlugin extends JavaPlugin implements Listener {
         CommandSender sender = getServer().getConsoleSender();
         String command = String.format("minecraft:tellraw %s %s", player.getName(), JSONValue.toJSONString(json));
         getServer().dispatchCommand(sender, command);
-    }
-
-    @EventHandler
-    public void onPlayerDeath(PlayerDeathEvent event)
-    {
-        if (keepInventory && event.getEntity().getWorld().getName().equals(worldName)) {
-            event.setKeepInventory(true);
-            event.getDrops().clear();
-        }
     }
 }
