@@ -95,15 +95,17 @@ public class BukkitResourcePlugin extends JavaPlugin {
         if (args.length == 0) {
             if (player != null) {
                 List<Object> message = new ArrayList<>();
-                message.add(format("&3Choose a biome: "));
+                message.add(format("&3&lResource Biomes "));
                 message.add(makeButton("Random"));
                 for (Biome biome : showBiomes) {
                     if (coordinates.containsKey(biome)) {
-                        message.add(format("&3, "));
+                        message.add(" ");
                         message.add(makeButton(biome.name()));
                     }
                 }
+                player.sendMessage("");
                 tellRaw(player, message);
+                player.sendMessage("");
             }
             if (sender.hasPermission(Config.PERM_ADMIN.key)) {
                 send(sender, "&e/Resource Crawl|Reload|Save|Clear");
@@ -330,8 +332,10 @@ public class BukkitResourcePlugin extends JavaPlugin {
     Object makeButton(String biome) {
         if (buttons.containsKey(biome)) return buttons.get(biome);
         Map<String, Object> result = new HashMap<>();
-        result.put("color", "aqua");
-        result.put("text", camels(biome));
+        result.put("text", "");
+        List<Object> extra = new ArrayList<>();
+        result.put("extra", extra);
+        extra.add(format("&r[&a%s&r]", camels(biome)).replace(" ", format(" &a")));
         Map<String, Object> event = new HashMap<>();
         result.put("clickEvent", event);
         event.put("action", "run_command");
@@ -342,7 +346,7 @@ public class BukkitResourcePlugin extends JavaPlugin {
         Map<String, Object> text = new HashMap<>();
         event.put("value", text);
         text.put("color", "dark_aqua");
-        text.put("text", "Teleport to a " + biome.toLowerCase().replace("_", " ") + " biome");
+        text.put("text", format("&a%s\n&oWarp\nTeleport to a %s biome.", camels(biome), camels(biome).toLowerCase()));
         buttons.put(biome, result);
         return result;
     }
