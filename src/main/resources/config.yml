@@ -15,3 +15,5 @@ Biomes:
 - EXTREME_HILLS
 - FLOWER_FOREST
 - SUNFLOWER_PLAINS
+CrawlerInterval: 100
+PlayerCooldown: 10

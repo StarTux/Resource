@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NonNull;
 import org.bukkit.ChatColor;
@@ -38,6 +39,8 @@ public class BukkitResourcePlugin extends JavaPlugin {
         PERM_ADMIN("resource.admin"),
         X("X"),
         Z("Z"),
+        CRAWLER_INTERVAL("CrawlerInterval"),
+        PLAYER_COOLDOWN("PlayerCooldown"),
         ;
         final String key;
         Config(String key) {
@@ -68,12 +71,14 @@ public class BukkitResourcePlugin extends JavaPlugin {
     }
     
     final Random random = new Random(System.currentTimeMillis());
-    final Crawler crawler = new Crawler();
-    final long CRAWLER_INTERVAL = 20L * 5L;
+    Crawler crawler = null;
+    long crawlerInterval = 20L * 5L;
+    int playerCooldown = 10;
     String worldName = "Resource";
     final Map<Biome, Coordinate> coordinates = new EnumMap<>(Biome.class);
     final Map<String, Object> buttons = new HashMap<>();
     final List<Biome> showBiomes = new ArrayList<>();
+    final Map<UUID, Long> cooldowns = new HashMap<>();
     int centerX = 0, centerZ = 0;
     int radius = 1000;
     
@@ -81,12 +86,12 @@ public class BukkitResourcePlugin extends JavaPlugin {
     public void onEnable() {
         saveDefaultConfig();
         loadAll();
-        crawler.runTaskTimer(this, CRAWLER_INTERVAL, CRAWLER_INTERVAL);
     }
 
     @Override
     public void onDisable() {
         storeAll();
+        cooldowns.clear();
     }
 
     @Override
@@ -114,6 +119,11 @@ public class BukkitResourcePlugin extends JavaPlugin {
         }
         String firstArg = args[0].toLowerCase();
         if (args.length == 1 && firstArg.equals("random")) {
+            int cd = getCooldownInSeconds(player);
+            if (cd > 0) {
+                send(player, "&cYou have to wait %d more seconds.", cd);
+                return true;
+            }
             Location location = randomLocation();
             if (location == null) {
                 location = rollLocation();
@@ -125,6 +135,7 @@ public class BukkitResourcePlugin extends JavaPlugin {
                 getLogger().info(String.format("Teleporting %s to %s %d,%d,%d", player.getName(), location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ()));
                 send(sender, "&3Teleporting you to a random location in the resource world");
                 player.teleport(location);
+                setCooldownInSeconds(player, playerCooldown);
             }
         } else if (args.length == 1 && firstArg.equals("crawl")) {
             if (!sender.hasPermission(Config.PERM_ADMIN.key)) return false;
@@ -166,9 +177,15 @@ public class BukkitResourcePlugin extends JavaPlugin {
                 send(sender, "&cNo known location for %s.", camels(biome.name()));
                 return true;
             }
+            int cd = getCooldownInSeconds(player);
+            if (cd > 0) {
+                send(player, "&cYou have to wait %d more seconds.", cd);
+                return true;
+            }
             getLogger().info(String.format("Teleporting %s to %s %d,%d,%d", player.getName(), location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ()));
             send(sender, "&3Teleporting you to a %s biome in the resource world.", biome.name().toLowerCase().replace("_", " "));;
             player.teleport(location);
+            setCooldownInSeconds(player, playerCooldown);
         }
         return true;
     }
@@ -228,6 +245,8 @@ public class BukkitResourcePlugin extends JavaPlugin {
         if (center.size() >= 1) centerX = center.get(0);
         if (center.size() >= 2) centerZ = center.get(1);
         radius = getConfig().getInt(Config.RADIUS.key, radius);
+        crawlerInterval = getConfig().getLong(Config.CRAWLER_INTERVAL.key, crawlerInterval);
+        playerCooldown = getConfig().getInt(Config.PLAYER_COOLDOWN.key, playerCooldown);
         showBiomes.clear();
         for (String entry : getConfig().getStringList(Config.SHOW_BIOMES.key)) {
             Biome biome;
@@ -263,6 +282,17 @@ public class BukkitResourcePlugin extends JavaPlugin {
                 coordinates.put(biome, new Coordinate(x, z));
             }
         }
+        // Crawler
+        if (crawler != null) {
+            try {
+                crawler.cancel();
+                crawler = null;
+            } catch (IllegalStateException ise) {}
+        }
+        crawler = new Crawler();
+        crawler.runTaskTimer(this, crawlerInterval, crawlerInterval);
+        // Cooldowns
+        cooldowns.clear();
     }
 
     void storeAll() {
@@ -365,5 +395,19 @@ public class BukkitResourcePlugin extends JavaPlugin {
         CommandSender sender = getServer().getConsoleSender();
         String command = String.format("minecraft:tellraw %s %s", player.getName(), JSONValue.toJSONString(json));
         getServer().dispatchCommand(sender, command);
+    }
+
+    void setCooldownInSeconds(Player player, int sec) {
+        long time = System.currentTimeMillis() + (long)sec * 1000;
+        cooldowns.put(player.getUniqueId(), time);
+    }
+
+    int getCooldownInSeconds(Player player) {
+        if (player.hasPermission(Config.PERM_ADMIN.key)) return 0;
+        Long time = cooldowns.get(player.getUniqueId());
+        if (time == null) return 0;
+        long result = time - System.currentTimeMillis();
+        if (result < 0) return 0;
+        return (int)(result / 1000);
     }
 }
