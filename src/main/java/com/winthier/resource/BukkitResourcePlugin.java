@@ -362,10 +362,8 @@ public class BukkitResourcePlugin extends JavaPlugin {
     Object makeButton(String biome) {
         if (buttons.containsKey(biome)) return buttons.get(biome);
         Map<String, Object> result = new HashMap<>();
-        result.put("text", "");
-        List<Object> extra = new ArrayList<>();
-        result.put("extra", extra);
-        extra.add(format("&r[&a%s&r]", camels(biome)).replace(" ", format(" &a")));
+        result.put("text", format("&r[&a%s&r]", camels(biome)).replace(" ", format(" &a")));
+        result.put("color", "green");
         Map<String, Object> event = new HashMap<>();
         result.put("clickEvent", event);
         event.put("action", "run_command");
