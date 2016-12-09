@@ -15,6 +15,7 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.NonNull;
 import org.bukkit.ChatColor;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -233,9 +234,7 @@ public class BukkitResourcePlugin extends JavaPlugin {
     }
 
     World getWorld() {
-        World result = getServer().getWorld(worldName);
-        if (result == null) getLogger().warning("World not found: " + worldName);
-        return result;
+        return getServer().getWorld(worldName);
     }
 
     void loadAll() {
@@ -350,9 +349,12 @@ public class BukkitResourcePlugin extends JavaPlugin {
     }
 
     void crawl() {
+        World world = getWorld();
+        if (world == null) return;
         Location rolled = rollLocation();
         if (rolled != null) testLocation(rolled);
-        for (Player player : getWorld().getPlayers()) {
+        for (Player player : world.getPlayers()) {
+            if (player.getGameMode() != GameMode.SURVIVAL) continue;
             Location loc = player.getLocation();
             loc = new Coordinate(loc).location();
             testLocation(loc);
