@@ -18,7 +18,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import org.bukkit.ChatColor;
-import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -32,28 +31,28 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class ResourcePlugin extends JavaPlugin {
-    final static String PERM_ADMIN = "resource.admin";
-    final Random random = new Random(System.currentTimeMillis());
+    static final String PERM_ADMIN = "resource.admin";
+    private final Random random = new Random(System.currentTimeMillis());
     // Configuration
-    int crawlerInterval = 20;
-    int playerCooldown = 5;
-    int biomeDistance = 256;
-    final List<String> worldNames = new ArrayList<>();
-    final List<BiomeGroup> biomeGroups = new ArrayList<>();
-    final List<Place> knownPlaces = new ArrayList<>();
-    final List<Place> unknownPlaces = new ArrayList<>();
-    final EnumMap<Biome, Integer> locatedBiomes = new EnumMap<>(Biome.class);
+    private int crawlerInterval = 20;
+    private int playerCooldown = 5;
+    private int biomeDistance = 256;
+    private final List<String> worldNames = new ArrayList<>();
+    private final List<BiomeGroup> biomeGroups = new ArrayList<>();
+    private final List<Place> knownPlaces = new ArrayList<>();
+    private final List<Place> unknownPlaces = new ArrayList<>();
+    private final EnumMap<Biome, Integer> locatedBiomes = new EnumMap<>(Biome.class);
     // State
-    final Map<UUID, Long> cooldowns = new HashMap<>();
-    int ticks;
-    boolean dirty;
-    long lastSave;
+    private final Map<UUID, Long> cooldowns = new HashMap<>();
+    private int ticks;
+    private boolean dirty;
+    private long lastSave;
 
     @AllArgsConstructor
     final class Place {
-        final String world;
-        final int x, z;
-        Biome biome;
+        private final String world;
+        private final int x, z;
+        private Biome biome;
 
         Place(String world, int x, int z) {
             this(world, x, z, (Biome)null);
@@ -85,10 +84,27 @@ public final class ResourcePlugin extends JavaPlugin {
             return bworld.getHighestBlockAt(x, z);
         }
 
+        Block getSaveBlock() {
+            Block block = getBlock();
+            int attempts = 0;
+            while ((block.getRelative(0, -1, 0).isLiquid() || block.getY() < 16 || block.getY() > 128 || block.getType().isSolid()) && attempts++ < 32) {
+                if (block.getWorld().getEnvironment() == World.Environment.NETHER) {
+                    block = block.getWorld().getBlockAt(x + random.nextInt(32) - 16,
+                                                        127,
+                                                        z + random.nextInt(32) - 16);
+                    while (block.getType() != Material.AIR && block.getY() > 0) block = block.getRelative(0, -1, 0);
+                    while (block.getType() == Material.AIR && block.getY() > 0) block = block.getRelative(0, -1, 0);
+                    block = block.getRelative(0, 1, 0);
+                } else {
+                    block = block.getWorld().getHighestBlockAt(x + random.nextInt(32) - 16,
+                                                               z + random.nextInt(32) - 16);
+                }
+            }
+            return block;
+        }
+
         Location getLocation() {
-            World bworld = getServer().getWorld(world);
-            if (bworld == null) return null;
-            return bworld.getHighestBlockAt(x, z).getLocation().add(0.5, 0.0, 0.5);
+            return getSaveBlock().getLocation().add(0.5, 0.0, 0.5);
         }
     }
 
@@ -117,7 +133,7 @@ public final class ResourcePlugin extends JavaPlugin {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String args[]) {
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         Player player = sender instanceof Player ? (Player)sender : null;
         String cmd = args.length > 0 ? args[0].toLowerCase() : null;
         if (cmd == null) {
@@ -137,7 +153,7 @@ public final class ResourcePlugin extends JavaPlugin {
                 for (Biome biome: biomeGroup.biomes) {
                     total += locatedBiomes.get(biome);
                 }
-                if (total < 0) continue;
+                if (total == 0) continue;
                 message.add(" ");
                 String lowname = biomeGroup.name.toLowerCase();
                 ChatColor color = colors.get(random.nextInt(colors.size()));
@@ -157,13 +173,13 @@ public final class ResourcePlugin extends JavaPlugin {
             }
             int cd = getCooldownInSeconds(player);
             if (cd > 0) {
-                Msg.info(player, "You have to wait %d more seconds.", cd);
+                Msg.warn(player, "You have to wait %d more seconds.", cd);
                 return true;
             }
             Collections.shuffle(knownPlaces, random);
             Place place = null;
             for (Place p: knownPlaces) {
-                if (p.biome != Biome.HELL) {
+                if (p.biome != Biome.HELL && p.biome != Biome.OCEAN && p.biome != Biome.DEEP_OCEAN) {
                     place = p;
                     break;
                 }
@@ -176,9 +192,9 @@ public final class ResourcePlugin extends JavaPlugin {
             Location pl = player.getLocation();
             location.setYaw(pl.getYaw());
             location.setPitch(pl.getPitch());
-            getLogger().info(String.format("Teleporting %s to %s %d,%d,%d", player.getName(), location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ()));
-            Msg.info(sender, "&aWarping to random location in the resource world");
-            Msg.sendActionBar(player, "&aWarping to random location in the resource world");
+            getLogger().info(String.format("[Random] Warp %s to %s %d,%d,%d", player.getName(), location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ()));
+            Msg.info(sender, "Warping to random resource biome.");
+            Msg.sendActionBar(player, "&aWarping to random resource biome");
             player.teleport(location);
             setCooldownInSeconds(player, playerCooldown);
         } else if (args.length == 1 && cmd.equals("crawl")) {
@@ -250,11 +266,30 @@ public final class ResourcePlugin extends JavaPlugin {
             location.setYaw(pl.getYaw());
             location.setPitch(pl.getPitch());
             getLogger().info(String.format("[%s] Warp %s to %s %d,%d,%d", biomeGroup.name, player.getName(), location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ()));
-            Msg.send(sender, "&aWarping to %s biome in the resource world.", biomeGroup.name);
+            Msg.info(player, "Warping to %s resource biome.", biomeGroup.name);
+            Msg.sendActionBar(player, "&aWarping to %s resource biome.", biomeGroup.name);
             player.teleport(location);
             setCooldownInSeconds(player, playerCooldown);
         }
         return true;
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        String arg = args.length == 0 ? "" : args[args.length - 1].toLowerCase();
+        if (args.length == 0 || args.length == 1) {
+            List<String> result = new ArrayList<>();
+            for (BiomeGroup biomeGroup: biomeGroups) {
+                if (!biomeGroup.name.toLowerCase().startsWith(arg)) continue;
+                int total = 0;
+                for (Biome biome: biomeGroup.biomes) {
+                    total += locatedBiomes.get(biome);
+                }
+                if (total > 0) result.add(biomeGroup.name);
+            }
+            return result;
+        }
+        return null;
     }
 
     void loadAll() {
@@ -341,7 +376,6 @@ public final class ResourcePlugin extends JavaPlugin {
     }
 
     int getCooldownInSeconds(Player player) {
-        if (player.hasPermission(PERM_ADMIN)) return 0;
         Long time = cooldowns.get(player.getUniqueId());
         if (time == null) return 0;
         long result = time - System.currentTimeMillis();

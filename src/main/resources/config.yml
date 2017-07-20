@@ -1,6 +1,6 @@
 Worlds: [ Resource, Resource_nether ]
 CrawlerInterval: 20
-BiomeDistance: 128
+BiomeDistance: 256
 PlayerCooldown: 5
 Biomes:
 - Name: Plains
