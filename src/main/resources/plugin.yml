@@ -1,8 +1,8 @@
 name: Resource
-description: Find biomes in the resource world
+description: Warp to resource biomes
 author: StarTux
 version: 0.1
-main: com.winthier.resource.BukkitResourcePlugin
+main: com.winthier.resource.ResourcePlugin
 depend: []
 commands:
   resource:

@@ -1,19 +1,86 @@
-World: Resource
-Center: [ 0, 0 ]
-Radius: 2000
+Worlds: [ Resource, Resource_nether ]
+CrawlerInterval: 20
+BiomeDistance: 128
+PlayerCooldown: 5
 Biomes:
-- PLAINS
-- TAIGA
-- JUNGLE
-- MESA
-- DESERT
-- ICE_PLAINS_SPIKES
-- BEACH
-- FOREST
-- BIRCH_FOREST
-- ROOFED_FOREST
-- EXTREME_HILLS
-- FLOWER_FOREST
-- SUNFLOWER_PLAINS
-CrawlerInterval: 100
-PlayerCooldown: 10
+- Name: Plains
+  Biomes:
+  - PLAINS
+  - MUTATED_PLAINS
+- Name: Taiga
+  Biomes:
+  - MUTATED_TAIGA
+  - MUTATED_TAIGA_COLD
+  - TAIGA
+  - REDWOOD_TAIGA:
+  - MUTATED_REDWOOD_TAIGA:
+- Name: Jungle
+  Biomes:
+  - JUNGLE
+  - JUNGLE_EDGE
+  - JUNGLE_HILLS
+  - MUTATED_JUNGLE
+  - MUTATED_JUNGLE_EDGE
+- Name: Mesa
+  Biomes:
+  - MESA
+  - MESA_CLEAR_ROCK
+  - MESA_ROCK
+  - MUTATED_MESA
+  - MUTATED_MESA_CLEAR_ROCK
+  - MUTATED_MESA_ROCK
+- Name: Desert
+  Biomes:
+  - DESERT
+  - DESERT_HILLS
+  - MUTATED_DESERT
+- Name: Ice
+  Biomes:
+  - ICE_FLATS
+  - MUTATED_ICE_FLATS
+  - ICE_MOUNTAINS
+  - FROZEN_OCEAN
+  - FROZEN_RIVER
+- Name: Forest
+  Biomes:
+  - BIRCH_FOREST
+  - BIRCH_FOREST_HILLS
+  - MUTATED_BIRCH_FOREST
+  - MUTATED_BIRCH_FOREST_HILLS
+  - FOREST
+  - MUTATED_FOREST
+  - FOREST_HILLS
+  - ROOFED_FOREST
+  - MUTATED_ROOFED_FOREST
+- Name: Mountains
+  Biomes:
+  - EXTREME_HILLS
+  - EXTREME_HILLS_WITH_TREES
+  - MUTATED_EXTREME_HILLS
+  - MUTATED_EXTREME_HILLS_WITH_TREES
+  - SMALLER_EXTREME_HILLS
+- Name: Mooshroom
+  Biomes:
+  - MUSHROOM_ISLAND
+  - MUSHROOM_ISLAND_SHORE
+- Name: Savanna
+  Biomes:
+  - SAVANNA
+  - SAVANNA_ROCK
+  - MUTATED_SAVANNA
+  - MUTATED_SAVANNA_ROCK
+- Name: Swamp
+  Biomes:
+  - SWAMPLAND
+  - MUTATED_SWAMPLAND
+- Name: Ocean
+  Biomes:
+  - DEEP_OCEAN
+  - OCEAN
+  - BEACHES
+- Name: River
+  Biomes:
+  - RIVER
+- Name: Nether
+  Biomes:
+  - HELL

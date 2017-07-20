@@ -4,16 +4,19 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
-import lombok.Getter;
-import lombok.NonNull;
+import java.util.stream.Collectors;
+import lombok.AllArgsConstructor;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -27,285 +30,272 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.json.simple.JSONValue;
 
-public class BukkitResourcePlugin extends JavaPlugin {
-    static enum Config {
-        WORLD_NAME("World"),
-        CENTER("Center"),
-        RADIUS("Radius"),
-        SHOW_BIOMES("Biomes"),
-        BIOMES_PATH("biomes.yml"),
-        PERM_ADMIN("resource.admin"),
-        X("X"),
-        Z("Z"),
-        CRAWLER_INTERVAL("CrawlerInterval"),
-        PLAYER_COOLDOWN("PlayerCooldown"),
-        ;
-        final String key;
-        Config(String key) {
-            this.key = key;
-        }
-    }
-
-    @Getter
-    class Coordinate {
-        final private int x, z;
-        Coordinate(int x, int z) {
-            this.x = x;
-            this.z = z;
-        }
-        Coordinate(Location location) {
-            this(location.getBlockX(), location.getBlockZ());
-        }
-        Location location() {
-            return getWorld().getHighestBlockAt(x, z).getLocation().add(0.5, 0.5, 0.5);
-        }
-    }
-
-    class Crawler extends BukkitRunnable {
-        @Override
-        public void run() {
-            crawl();
-        }
-    }
-    
+public final class ResourcePlugin extends JavaPlugin {
+    final static String PERM_ADMIN = "resource.admin";
     final Random random = new Random(System.currentTimeMillis());
-    Crawler crawler = null;
-    long crawlerInterval = 20L * 5L;
-    int playerCooldown = 10;
-    String worldName = "Resource";
-    final Map<Biome, Coordinate> coordinates = new EnumMap<>(Biome.class);
-    final Map<String, Object> buttons = new HashMap<>();
-    final List<Biome> showBiomes = new ArrayList<>();
+    // Configuration
+    int crawlerInterval = 20;
+    int playerCooldown = 5;
+    int biomeDistance = 256;
+    final List<String> worldNames = new ArrayList<>();
+    final List<BiomeGroup> biomeGroups = new ArrayList<>();
+    final List<Place> knownPlaces = new ArrayList<>();
+    final List<Place> unknownPlaces = new ArrayList<>();
+    final EnumMap<Biome, Integer> locatedBiomes = new EnumMap<>(Biome.class);
+    // State
     final Map<UUID, Long> cooldowns = new HashMap<>();
-    int centerX = 0, centerZ = 0;
-    int radius = 1000;
-    
+    int ticks;
+    boolean dirty;
+    long lastSave;
+
+    @AllArgsConstructor
+    final class Place {
+        final String world;
+        final int x, z;
+        Biome biome;
+
+        Place(String world, int x, int z) {
+            this(world, x, z, (Biome)null);
+        }
+
+        Place(ConfigurationSection config) {
+            this.world = config.getString("world");
+            this.x = config.getInt("x");
+            this.z = config.getInt("z");
+            if (config.isSet("biome")) {
+                this.biome = Biome.valueOf(config.getString("biome").toUpperCase());
+            }
+        }
+
+        Map<String, Object> serialize() {
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("world", world);
+            result.put("x", x);
+            result.put("z", z);
+            if (biome != null) {
+                result.put("biome", biome.name());
+            }
+            return result;
+        }
+
+        Block getBlock() {
+            World bworld = getServer().getWorld(world);
+            if (bworld == null) return null;
+            return bworld.getHighestBlockAt(x, z);
+        }
+
+        Location getLocation() {
+            World bworld = getServer().getWorld(world);
+            if (bworld == null) return null;
+            return bworld.getHighestBlockAt(x, z).getLocation().add(0.5, 0.0, 0.5);
+        }
+    }
+
+    final class BiomeGroup {
+        final String name;
+        final Set<Biome> biomes = EnumSet.noneOf(Biome.class);
+
+        BiomeGroup(String name, Collection<Biome> biomes) {
+            this.name = name;
+            this.biomes.addAll(biomes);
+        }
+    }
+
     @Override
     public void onEnable() {
+        resetLocatedBiomes();
         saveDefaultConfig();
         loadAll();
+        getServer().getScheduler().runTaskTimer(this, () -> onTick(), 1, 1);
     }
 
     @Override
     public void onDisable() {
-        storeAll();
         cooldowns.clear();
+        if (dirty) saveAll();
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String args[]) {
         Player player = sender instanceof Player ? (Player)sender : null;
-        if (args.length == 0) {
-            if (player != null) {
-                List<Object> message = new ArrayList<>();
-                message.add(format("&3&lResource Biomes "));
-                message.add(makeButton("Random"));
-                for (Biome biome : showBiomes) {
-                    if (coordinates.containsKey(biome)) {
-                        message.add(" ");
-                        message.add(makeButton(biome.name()));
-                    }
-                }
-                player.sendMessage("");
-                tellRaw(player, message);
-                player.sendMessage("");
-            }
-            if (sender.hasPermission(Config.PERM_ADMIN.key)) {
-                send(sender, "&e/Resource Crawl|Reload|Save|Clear");
-            }
-            return true;
-        }
-        String firstArg = args[0].toLowerCase();
-        if (args.length == 1 && firstArg.equals("random")) {
-            int cd = getCooldownInSeconds(player);
-            if (cd > 0) {
-                send(player, "&cYou have to wait %d more seconds.", cd);
+        String cmd = args.length > 0 ? args[0].toLowerCase() : null;
+        if (cmd == null) {
+            List<ChatColor> colors = Arrays.asList(ChatColor.GREEN, ChatColor.AQUA, ChatColor.RED, ChatColor.LIGHT_PURPLE, ChatColor.YELLOW, ChatColor.DARK_AQUA, ChatColor.GOLD, ChatColor.BLUE);
+            if (player == null) {
+                Msg.warn(sender, "Player expected");
                 return true;
             }
-            Location location = randomLocation();
-            if (location == null) {
-                location = rollLocation();
-                if (location != null) testLocation(location);
+            List<Object> message = new ArrayList<>();
+            message.add(" ");
+            message.add(Msg.button(ChatColor.GREEN,
+                                   "[Random]", null,
+                                   "&a/resource random\n&r&oRandom biome",
+                                   "/resource random"));
+            for (BiomeGroup biomeGroup : biomeGroups) {
+                int total = 0;
+                for (Biome biome: biomeGroup.biomes) {
+                    total += locatedBiomes.get(biome);
+                }
+                if (total < 0) continue;
+                message.add(" ");
+                String lowname = biomeGroup.name.toLowerCase();
+                ChatColor color = colors.get(random.nextInt(colors.size()));
+                message.add(Msg.button(color,
+                                       "[" + biomeGroup.name + "]", null,
+                                       "&a/resource " + lowname + "\n&r&o" + biomeGroup.name,
+                                       "/resource " + lowname));
             }
-            if (location == null) {
-                send(sender, "&cNothing found. Please try again");
-            } else {
-                getLogger().info(String.format("Teleporting %s to %s %d,%d,%d", player.getName(), location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ()));
-                send(sender, "&3Teleporting you to a random location in the resource world");
-                player.teleport(location);
-                setCooldownInSeconds(player, playerCooldown);
+            Msg.send(player, "&3&lResource Biomes ");
+            Msg.raw(player, message);
+            player.sendMessage("");
+            return true;
+        } else if (cmd.equals("random") && args.length == 1) {
+            if (player == null) {
+                Msg.warn(sender, "Player expected");
+                return true;
             }
-        } else if (args.length == 1 && firstArg.equals("crawl")) {
-            if (!sender.hasPermission(Config.PERM_ADMIN.key)) return false;
+            int cd = getCooldownInSeconds(player);
+            if (cd > 0) {
+                Msg.info(player, "You have to wait %d more seconds.", cd);
+                return true;
+            }
+            Collections.shuffle(knownPlaces, random);
+            Place place = null;
+            for (Place p: knownPlaces) {
+                if (p.biome != Biome.HELL) {
+                    place = p;
+                    break;
+                }
+            }
+            if (place == null) {
+                Msg.warn(player, "No biomes found.");
+                return true;
+            }
+            Location location = place.getLocation();
+            Location pl = player.getLocation();
+            location.setYaw(pl.getYaw());
+            location.setPitch(pl.getPitch());
+            getLogger().info(String.format("Teleporting %s to %s %d,%d,%d", player.getName(), location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ()));
+            Msg.info(sender, "&aWarping to random location in the resource world");
+            Msg.sendActionBar(player, "&aWarping to random location in the resource world");
+            player.teleport(location);
+            setCooldownInSeconds(player, playerCooldown);
+        } else if (args.length == 1 && cmd.equals("crawl")) {
+            if (!sender.hasPermission(PERM_ADMIN)) return false;
             crawl();
-            send(sender, "&eCompleted one crawler iteration");
-        } else if (args.length == 1 && firstArg.equals("reload")) {
-            if (!sender.hasPermission(Config.PERM_ADMIN.key)) return false;
+            Msg.send(sender, "&eCompleted one crawler iteration");
+        } else if (args.length == 1 && cmd.equals("info")) {
+            if (!sender.hasPermission(PERM_ADMIN)) return false;
+            Msg.info(sender, "%d known and %d unknown places", knownPlaces.size(), unknownPlaces.size());
+            for (BiomeGroup biomeGroup: biomeGroups) {
+                int total = 0;
+                for (Biome biome: biomeGroup.biomes) {
+                    total += locatedBiomes.get(biome);
+                }
+                Msg.send(sender, biomeGroup.name + ": " + total);
+            }
+        } else if (args.length == 1 && cmd.equals("reload")) {
+            if (!sender.hasPermission(PERM_ADMIN)) return false;
             loadAll();
-            send(sender, "&eConfiguration reloaded");
-        } else if (args.length == 1 && firstArg.equals("save")) {
-            if (!sender.hasPermission(Config.PERM_ADMIN.key)) return false;
-            storeAll();
-            send(sender, "&eConfiguration saved");
-        } else if (args.length == 1 && firstArg.equals("clear")) {
-            if (!sender.hasPermission(Config.PERM_ADMIN.key)) return false;
-            coordinates.clear();
-            send(sender, "&eLocations cleared");
+            Msg.send(sender, "&eConfiguration reloaded");
+        } else if (args.length == 1 && cmd.equals("save")) {
+            if (!sender.hasPermission(PERM_ADMIN)) return false;
+            saveAll();
+            Msg.send(sender, "&eConfiguration saved");
+        } else if (args.length == 1 && cmd.equals("setup")) {
+            if (!sender.hasPermission(PERM_ADMIN)) return false;
+            setup();
+            Msg.send(sender, "&eSetup done. %d known and %d unknown places with a distance of %d blocks.", knownPlaces.size(), unknownPlaces.size(), biomeDistance);
         } else {
             if (player == null) {
-                send(sender, "&cPlayer expected");
+                Msg.warn(sender, "Player expected");
+                return true;
+            }
+            int cd = getCooldownInSeconds(player);
+            if (cd > 0) {
+                Msg.warn(player, "You have to wait %d more seconds.", cd);
                 return true;
             }
             StringBuilder sb = new StringBuilder(args[0]);
             for (int j = 1; j < args.length; ++j) {
-                sb.append("_").append(args[j]);
+                sb.append(" ").append(args[j]);
             }
-            Biome biome;
-            try {
-                biome = Biome.valueOf(sb.toString().toUpperCase());
-            } catch (IllegalArgumentException iae) {
-                return false;
+            String name = sb.toString();
+            BiomeGroup biomeGroup = null;
+            for (BiomeGroup bg: biomeGroups) {
+                if (bg.name.equalsIgnoreCase(name)) {
+                    biomeGroup = bg;
+                    break;
+                }
             }
-            if (!showBiomes.contains(biome) && !player.hasPermission(Config.PERM_ADMIN.key)) {
-                send(sender, "&cNo known location for %s.", camels(biome.name()));
+            if (biomeGroup == null) {
+                Msg.warn(player, "Resource biome not found: %s", name);
                 return true;
             }
-            Location location = getLocation(biome);
-            if (location == null) {
-                send(sender, "&cNo known location for %s.", camels(biome.name()));
+            Collections.shuffle(knownPlaces, random);
+            Place place = null;
+            for (Place p: knownPlaces) {
+                if (biomeGroup.biomes.contains(p.biome)) {
+                    place = p;
+                    break;
+                }
+            }
+            if (place == null) {
+                Msg.warn(sender, "No known location for %s.", biomeGroup.name);
                 return true;
             }
-            int cd = getCooldownInSeconds(player);
-            if (cd > 0) {
-                send(player, "&cYou have to wait %d more seconds.", cd);
-                return true;
-            }
-            getLogger().info(String.format("Teleporting %s to %s %d,%d,%d", player.getName(), location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ()));
-            send(sender, "&3Teleporting you to a %s biome in the resource world.", biome.name().toLowerCase().replace("_", " "));;
+            Location location = place.getLocation();
+            Location pl = player.getLocation();
+            location.setYaw(pl.getYaw());
+            location.setPitch(pl.getPitch());
+            getLogger().info(String.format("[%s] Warp %s to %s %d,%d,%d", biomeGroup.name, player.getName(), location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ()));
+            Msg.send(sender, "&aWarping to %s biome in the resource world.", biomeGroup.name);
             player.teleport(location);
             setCooldownInSeconds(player, playerCooldown);
         }
         return true;
     }
 
-    private boolean checkLocation(Location location, Biome biome, boolean log) {
-        // Check if location is in the right world
-        if (!getWorld().equals(location.getWorld())) {
-            if (log) getLogger().warning("Biome location not in the right world: " + biome);
-            return false;
-        }
-        // Check if biome at location is still correct
-        if (biome != null && !biome.equals(getWorld().getBiome(location.getBlockX(), location.getBlockZ()))) {
-            if (log) getLogger().warning("Biome location not of the right biome: " + biome);
-            return false;
-        }
-        // Check if biome at location is blocked
-        if (!location.getBlock().getType().isTransparent() || !location.getBlock().getRelative(0, 1, 0).getType().isTransparent()) {
-            if (log) getLogger().warning("Biome location is blocked: " + biome);
-            return false;
-        }
-        // Check if biome at location is on solid ground
-        if (!location.getBlock().getRelative(0, -1, 0).getType().isSolid()) {
-            if (log) getLogger().warning("Biome location in the air: " + biome);
-            return false;
-        }
-        return true;
-    }
-
-    Location getLocation(@NonNull Biome biome) {
-        Coordinate coordinate = coordinates.get(biome);
-        if (coordinate == null) return null;
-        Location location = coordinate.location();
-        if (!checkLocation(location, biome, true)) return null;
-        return location;
-    }
-
-    static String format(@NonNull String message, Object... args) {
-        message = ChatColor.translateAlternateColorCodes('&', message);
-        if (args.length > 0) message = String.format(message, args);
-        return message;
-    }
-
-    static void send(@NonNull CommandSender sender, @NonNull String message, Object... args) {
-        sender.sendMessage(format(message, args));
-    }
-
-    World getWorld() {
-        return getServer().getWorld(worldName);
-    }
-
     void loadAll() {
         reloadConfig();
-        worldName = getConfig().getString(Config.WORLD_NAME.key, worldName);
-        List<Integer> center = getConfig().getIntegerList(Config.CENTER.key);
-        if (center.size() >= 1) centerX = center.get(0);
-        if (center.size() >= 2) centerZ = center.get(1);
-        radius = getConfig().getInt(Config.RADIUS.key, radius);
-        crawlerInterval = getConfig().getLong(Config.CRAWLER_INTERVAL.key, crawlerInterval);
-        playerCooldown = getConfig().getInt(Config.PLAYER_COOLDOWN.key, playerCooldown);
-        showBiomes.clear();
-        for (String entry : getConfig().getStringList(Config.SHOW_BIOMES.key)) {
-            Biome biome;
-            try {
-                biome = Biome.valueOf(entry.toUpperCase());
-            } catch (IllegalArgumentException iae) {
-                getLogger().warning("Biome in config.yml (Biomes) not found: " + entry);
-                continue;
+        worldNames.clear();
+        worldNames.addAll(getConfig().getStringList("Worlds"));
+        crawlerInterval = getConfig().getInt("CrawlerInterval");
+        playerCooldown = getConfig().getInt("PlayerCooldown");
+        biomeDistance = getConfig().getInt("BiomeDistance");
+        biomeGroups.clear();
+        for (Map<?, ?> map: getConfig().getMapList("Biomes")) {
+            ConfigurationSection section = getConfig().createSection("tmp", map);
+            List<Biome> biomes = new ArrayList<>();
+            for (String name: section.getStringList("Biomes")) {
+                try {
+                    biomes.add(Biome.valueOf(name.toUpperCase()));
+                } catch (IllegalArgumentException iae) {
+                    System.err.println("Unknown biome '" + name + "'. Ignoring");
+                    iae.printStackTrace();
+                }
             }
-            if (showBiomes.contains(biome)) {
-                getLogger().warning("Duplicate biome in config.yml (Biomes): " + biome);
-            } else {
-                showBiomes.add(biome);
-            }
+            biomeGroups.add(new BiomeGroup(section.getString("Name"), biomes));
         }
-        if (showBiomes.isEmpty()) getLogger().warning("Warning: Biomes list is empty. Not going to display any biomes");
-        //
-        File file = new File(getDataFolder(), Config.BIOMES_PATH.key);
-        YamlConfiguration biomes = YamlConfiguration.loadConfiguration(file);
-        coordinates.clear();
-        for (String key : biomes.getKeys(false)) {
-            Biome biome;
-            try {
-                biome = Biome.valueOf(key);
-            } catch (IllegalArgumentException iae) {
-                getLogger().warning("Biome from biomes.yml not found: " + key);
-                continue;
-            }
-            ConfigurationSection section = biomes.getConfigurationSection(biome.name());
-            if (section != null) {
-                int x = section.getInt(Config.X.key, 0);
-                int z = section.getInt(Config.Z.key, 0);
-                coordinates.put(biome, new Coordinate(x, z));
-            }
-        }
-        // Crawler
-        if (crawler != null) {
-            try {
-                crawler.cancel();
-                crawler = null;
-            } catch (IllegalStateException ise) {}
-        }
-        crawler = new Crawler();
-        crawler.runTaskTimer(this, crawlerInterval, crawlerInterval);
-        // Cooldowns
         cooldowns.clear();
+        // Places
+        knownPlaces.clear();
+        unknownPlaces.clear();
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(new File(getDataFolder(), "places.yml"));
+        knownPlaces.addAll(config.getMapList("known").stream().map(m -> new Place(config.createSection("tmp", m))).collect(Collectors.toList()));
+        unknownPlaces.addAll(config.getMapList("unknown").stream().map(m -> new Place(config.createSection("tmp", m))).collect(Collectors.toList()));
+        resetLocatedBiomes();
+        for (Place place: knownPlaces) locatedBiomes.put(place.biome, locatedBiomes.get(place.biome) + 1);
     }
 
-    void storeAll() {
-        saveConfig();
+    void saveAll() {
+        dirty = false;
+        lastSave = System.currentTimeMillis();
         YamlConfiguration biomes = new YamlConfiguration();
-        for (Biome biome : Biome.values()) {
-            Coordinate coordinate = coordinates.get(biome);
-            if (coordinate != null) {
-                ConfigurationSection section = biomes.createSection(biome.name());
-                section.set(Config.X.key, coordinate.getX());
-                section.set(Config.Z.key, coordinate.getZ());
-            }
-        }
-        File file = new File(getDataFolder(), Config.BIOMES_PATH.key);
+        biomes.set("known", knownPlaces.stream().map(p -> p.serialize()).collect(Collectors.toList()));
+        biomes.set("unknown", unknownPlaces.stream().map(p -> p.serialize()).collect(Collectors.toList()));
+        File file = new File(getDataFolder(), "places.yml");
         try {
             biomes.save(file);
         } catch (IOException ioe) {
@@ -313,88 +303,36 @@ public class BukkitResourcePlugin extends JavaPlugin {
         }
     }
 
-    boolean testLocation(@NonNull Location location) {
-        if (!checkLocation(location, null, false)) return false;
-        Biome biome = getWorld().getBiome(location.getBlockX(), location.getBlockZ());
-        coordinates.put(biome, new Coordinate(location));
-        return true;
-    }
-
-    Coordinate rollCoordinate() {
-        int x = centerX - radius + random.nextInt(radius + radius);
-        int z = centerZ - radius + random.nextInt(radius + radius);
-        return new Coordinate(x, z );
-    }
-
-    Location rollLocation() {
-        for (int i = 0; i < 32; ++i) {
-            Coordinate coordinate = rollCoordinate();
-            Location location = coordinate.location();
-            if (checkLocation(location, null, false)) {
-                return location;
+    void setup() {
+        knownPlaces.clear();
+        unknownPlaces.clear();
+        resetLocatedBiomes();
+        for (String worldName: worldNames) {
+            World world = getServer().getWorld(worldName);
+            if (world == null) {
+                getLogger().warning("World not found: " + worldName);
+                continue;
             }
-        }
-        return null;
-    }
-    
-    Location randomLocation() {
-        List<Biome> shuf = Arrays.asList(Biome.values());
-        Collections.shuffle(shuf);
-        for (Biome biome : shuf) {
-            if (coordinates.containsKey(biome)) {
-                return coordinates.get(biome).location();
+            double size = world.getWorldBorder().getSize() * 0.5 - 128.0;
+            if (size > 100000.0) size = 100000.0;
+            Block a = world.getWorldBorder().getCenter().add(-size, 0, -size).getBlock();
+            Block b = world.getWorldBorder().getCenter().add(size, 0, size).getBlock();
+            int count = 0;
+            for (int z = a.getZ(); z <= b.getZ(); z += biomeDistance) {
+                for (int x = a.getX(); x <= b.getX(); x += biomeDistance) {
+                    if (world.getEnvironment() == World.Environment.NETHER) {
+                        knownPlaces.add(new Place(world.getName(), x, z, Biome.HELL));
+                        locatedBiomes.put(Biome.HELL, locatedBiomes.get(Biome.HELL) + 1);
+                    } else {
+                        unknownPlaces.add(new Place(world.getName(), x, z));
+                    }
+                    count += 1;
+                }
             }
+            getLogger().info("Setup: " + world.getName() + " has " + count + " places.");
         }
-        return null;
-    }
-
-    void crawl() {
-        World world = getWorld();
-        if (world == null) return;
-        Location rolled = rollLocation();
-        if (rolled != null) testLocation(rolled);
-        for (Player player : world.getPlayers()) {
-            if (player.getGameMode() != GameMode.SURVIVAL) continue;
-            Location loc = player.getLocation();
-            loc = new Coordinate(loc).location();
-            testLocation(loc);
-        }
-    }
-
-    Object makeButton(String biome) {
-        if (buttons.containsKey(biome)) return buttons.get(biome);
-        Map<String, Object> result = new HashMap<>();
-        result.put("text", format("&r[&a%s&r]", camels(biome)).replace(" ", format(" &a")));
-        result.put("color", "green");
-        Map<String, Object> event = new HashMap<>();
-        result.put("clickEvent", event);
-        event.put("action", "run_command");
-        event.put("value", "/resource " + biome.toLowerCase());
-        event = new HashMap<>();
-        result.put("hoverEvent", event);
-        event.put("action", "show_text");
-        Map<String, Object> text = new HashMap<>();
-        event.put("value", text);
-        text.put("color", "dark_aqua");
-        text.put("text", format("&a%s\n&oWarp\nTeleport to a %s biome.", camels(biome), camels(biome).toLowerCase()));
-        buttons.put(biome, result);
-        return result;
-    }
-
-    String camels(String biome) {
-        StringBuilder sb = new StringBuilder();
-        for (String token : biome.split("_")) {
-            if (sb.length() > 0) sb.append(" ");
-            sb.append(token.substring(0, 1).toUpperCase());
-            sb.append(token.substring(1).toLowerCase());
-        }
-        return sb.toString();
-    }
-
-    void tellRaw(Player player, Object json) {
-        CommandSender sender = getServer().getConsoleSender();
-        String command = String.format("minecraft:tellraw %s %s", player.getName(), JSONValue.toJSONString(json));
-        getServer().dispatchCommand(sender, command);
+        Collections.shuffle(unknownPlaces, random);
+        saveAll();
     }
 
     void setCooldownInSeconds(Player player, int sec) {
@@ -403,11 +341,38 @@ public class BukkitResourcePlugin extends JavaPlugin {
     }
 
     int getCooldownInSeconds(Player player) {
-        if (player.hasPermission(Config.PERM_ADMIN.key)) return 0;
+        if (player.hasPermission(PERM_ADMIN)) return 0;
         Long time = cooldowns.get(player.getUniqueId());
         if (time == null) return 0;
         long result = time - System.currentTimeMillis();
         if (result < 0) return 0;
         return (int)(result / 1000);
+    }
+
+    void onTick() {
+        if (ticks < crawlerInterval) {
+            ticks += 1;
+        } else {
+            ticks = 0;
+            crawl();
+        }
+    }
+
+    void crawl() {
+        if (unknownPlaces.isEmpty()) return;
+        Place place = unknownPlaces.remove(unknownPlaces.size() - 1);
+        place.biome = place.getBlock().getBiome();
+        knownPlaces.add(place);
+        locatedBiomes.put(place.biome, locatedBiomes.get(place.biome) + 1);
+        dirty = true;
+        if (lastSave + 60000L < System.currentTimeMillis()) {
+            saveAll();
+        }
+    }
+
+    void resetLocatedBiomes() {
+        for (Biome biome: Biome.values()) {
+            locatedBiomes.put(biome, 0);
+        }
     }
 }
