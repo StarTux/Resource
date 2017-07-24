@@ -1,26 +1,13 @@
 Worlds: [ Resource, Resource_nether ]
 CrawlerInterval: 20
 BiomeDistance: 256
-PlayerCooldown: 5
+PlayerCooldown: 10
 Biomes:
-- Name: Plains
+- Name: Desert
   Biomes:
-  - PLAINS
-  - MUTATED_PLAINS
-- Name: Taiga
-  Biomes:
-  - MUTATED_TAIGA
-  - MUTATED_TAIGA_COLD
-  - TAIGA
-  - REDWOOD_TAIGA:
-  - MUTATED_REDWOOD_TAIGA:
-- Name: Jungle
-  Biomes:
-  - JUNGLE
-  - JUNGLE_EDGE
-  - JUNGLE_HILLS
-  - MUTATED_JUNGLE
-  - MUTATED_JUNGLE_EDGE
+  - DESERT
+  - DESERT_HILLS
+  - MUTATED_DESERT
 - Name: Mesa
   Biomes:
   - MESA
@@ -29,18 +16,61 @@ Biomes:
   - MUTATED_MESA
   - MUTATED_MESA_CLEAR_ROCK
   - MUTATED_MESA_ROCK
-- Name: Desert
+- Name: Plains
   Biomes:
-  - DESERT
-  - DESERT_HILLS
-  - MUTATED_DESERT
-- Name: Ice
+  - PLAINS
+  - MUTATED_PLAINS
+- Name: Mooshroom
+  Biomes:
+  - MUSHROOM_ISLAND
+  - MUSHROOM_ISLAND_SHORE
+- Name: Taiga
+  Biomes:
+  - MUTATED_TAIGA
+  - MUTATED_TAIGA_COLD
+  - TAIGA
+  - TAIGA_HILLS
+  - TAIGA_COLD
+  - TAIGA_COLD_HILLS
+  - REDWOOD_TAIGA:
+  - REDWOOD_TAIGA_HILLS
+  - MUTATED_REDWOOD_TAIGA:
+  - MUTATED_REDWOOD_TAIGA_HILLS:
+- Name: Jungle
+  Biomes:
+  - JUNGLE
+  - JUNGLE_EDGE
+  - JUNGLE_HILLS
+  - MUTATED_JUNGLE
+  - MUTATED_JUNGLE_EDGE
+- Name: Snowy
   Biomes:
   - ICE_FLATS
   - MUTATED_ICE_FLATS
   - ICE_MOUNTAINS
   - FROZEN_OCEAN
   - FROZEN_RIVER
+  - MUTATED_TAIGA
+  - MUTATED_TAIGA_COLD
+  - TAIGA
+  - TAIGA_HILLS
+  - TAIGA_COLD
+  - TAIGA_COLD_HILLS
+  - REDWOOD_TAIGA:
+  - REDWOOD_TAIGA_HILLS
+  - MUTATED_REDWOOD_TAIGA:
+  - MUTATED_REDWOOD_TAIGA_HILLS:
+  - COLD_BEACH
+- Name: Frozen
+  Biomes:
+  - ICE_FLATS
+  - MUTATED_ICE_FLATS
+  - ICE_MOUNTAINS
+  - FROZEN_OCEAN
+  - FROZEN_RIVER
+- Name: Icicles
+  Biomes:
+  - MUTATED_ICE_FLATS
 - Name: Forest
   Biomes:
   - BIRCH_FOREST
@@ -50,6 +80,12 @@ Biomes:
   - FOREST
   - MUTATED_FOREST
   - FOREST_HILLS
+  - REDWOOD_TAIGA:
+  - REDWOOD_TAIGA_HILLS
+  - MUTATED_REDWOOD_TAIGA:
+  - MUTATED_REDWOOD_TAIGA_HILLS:
+- Name: Roofed Forest
+  Biomes:
   - ROOFED_FOREST
   - MUTATED_ROOFED_FOREST
 - Name: Mountains
@@ -59,10 +95,6 @@ Biomes:
   - MUTATED_EXTREME_HILLS
   - MUTATED_EXTREME_HILLS_WITH_TREES
   - SMALLER_EXTREME_HILLS
-- Name: Mooshroom
-  Biomes:
-  - MUSHROOM_ISLAND
-  - MUSHROOM_ISLAND_SHORE
 - Name: Savanna
   Biomes:
   - SAVANNA
@@ -73,14 +105,12 @@ Biomes:
   Biomes:
   - SWAMPLAND
   - MUTATED_SWAMPLAND
-- Name: Ocean
+- Name: Water
   Biomes:
-  - DEEP_OCEAN
-  - OCEAN
   - BEACHES
-- Name: River
-  Biomes:
   - RIVER
+  - STONE_BEACH
+  - COLD_BEACH
 - Name: Nether
   Biomes:
   - HELL
