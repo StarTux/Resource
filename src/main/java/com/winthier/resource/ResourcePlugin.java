@@ -86,18 +86,28 @@ public final class ResourcePlugin extends JavaPlugin {
 
         Block getSaveBlock() {
             Block block = getBlock();
-            int attempts = 0;
-            while ((block.getRelative(0, -1, 0).isLiquid() || block.getY() < 16 || block.getY() > 128 || block.getType().isSolid()) && attempts++ < 32) {
-                if (block.getWorld().getEnvironment() == World.Environment.NETHER) {
+            if (block.getWorld().getEnvironment() == World.Environment.NETHER) {
+                for (int attempts = 0; attempts < 10; attempts += 1) {
                     block = block.getWorld().getBlockAt(x + random.nextInt(32) - 16,
                                                         127,
                                                         z + random.nextInt(32) - 16);
                     while (block.getType() != Material.AIR && block.getY() > 0) block = block.getRelative(0, -1, 0);
-                    while (block.getType() == Material.AIR && block.getY() > 0) block = block.getRelative(0, -1, 0);
+                    int air = 0;
+                    while (block.getType() == Material.AIR && block.getY() > 0) {
+                        block = block.getRelative(0, -1, 0);
+                        air += 1;
+                    }
+                    Block block2 = block;
                     block = block.getRelative(0, 1, 0);
-                } else {
+                    if (air >= 2 && block2.getType().isSolid()) {
+                        break;
+                    }
+                }
+            } else {
+                for (int attempts = 0; attempts < 10; attempts += 1) {
                     block = block.getWorld().getHighestBlockAt(x + random.nextInt(32) - 16,
                                                                z + random.nextInt(32) - 16);
+                    if (!block.getRelative(0, -1, 0).isLiquid()) break;
                 }
             }
             return block;
