@@ -47,6 +47,7 @@ public final class ResourcePlugin extends JavaPlugin {
     private int ticks;
     private boolean dirty;
     private long lastSave;
+    private int attempts;
 
     @AllArgsConstructor
     final class Place {
@@ -87,7 +88,7 @@ public final class ResourcePlugin extends JavaPlugin {
         Block getSaveBlock() {
             Block block = getBlock();
             if (block.getWorld().getEnvironment() == World.Environment.NETHER) {
-                for (int attempts = 0; attempts < 10; attempts += 1) {
+                for (attempts = 0; attempts < 50; attempts += 1) {
                     block = block.getWorld().getBlockAt(x + random.nextInt(32) - 16,
                                                         127,
                                                         z + random.nextInt(32) - 16);
@@ -104,7 +105,7 @@ public final class ResourcePlugin extends JavaPlugin {
                     }
                 }
             } else {
-                for (int attempts = 0; attempts < 10; attempts += 1) {
+                for (attempts = 0; attempts < 10; attempts += 1) {
                     block = block.getWorld().getHighestBlockAt(x + random.nextInt(32) - 16,
                                                                z + random.nextInt(32) - 16);
                     if (!block.getRelative(0, -1, 0).isLiquid()) break;
@@ -202,7 +203,7 @@ public final class ResourcePlugin extends JavaPlugin {
             Location pl = player.getLocation();
             location.setYaw(pl.getYaw());
             location.setPitch(pl.getPitch());
-            getLogger().info(String.format("[Random] Warp %s to %s %d,%d,%d", player.getName(), location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ()));
+            getLogger().info(String.format("[Random] Warp %s to %s %d,%d,%d (%d attempts)", player.getName(), location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ(), attempts));
             Msg.info(sender, "Warping to random resource biome.");
             Msg.sendActionBar(player, "&aWarping to random resource biome");
             player.teleport(location);
@@ -275,7 +276,7 @@ public final class ResourcePlugin extends JavaPlugin {
             Location pl = player.getLocation();
             location.setYaw(pl.getYaw());
             location.setPitch(pl.getPitch());
-            getLogger().info(String.format("[%s] Warp %s to %s %d,%d,%d", biomeGroup.name, player.getName(), location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ()));
+            getLogger().info(String.format("[%s] Warp %s to %s %d,%d,%d (%d attempts)", biomeGroup.name, player.getName(), location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ(), attempts));
             Msg.info(player, "Warping to %s resource biome.", biomeGroup.name);
             Msg.sendActionBar(player, "&aWarping to %s resource biome.", biomeGroup.name);
             player.teleport(location);
