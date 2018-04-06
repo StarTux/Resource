@@ -401,15 +401,6 @@ public final class ResourcePlugin extends JavaPlugin {
             ticks = 0;
             crawl();
         }
-        for (String worldName: worldNames) {
-            World world = getServer().getWorld(worldName);
-            if (world != null && world.getEnvironment() == World.Environment.NORMAL) {
-                long time = world.getTime();
-                if (time > 13000 && time < 23000) {
-                    world.setTime(time + 19);
-                }
-            }
-        }
     }
 
     void crawl() {
