@@ -405,7 +405,10 @@ public final class ResourcePlugin extends JavaPlugin {
 
     void crawl() {
         if (unknownPlaces.isEmpty()) return;
-        Place place = unknownPlaces.remove(unknownPlaces.size() - 1);
+        Place place = unknownPlaces.get(unknownPlaces.size() - 1);
+        Block block = place.getBlock();
+        if (block == null) return;
+        unknownPlaces.remove(unknownPlaces.size() - 1);
         place.biome = place.getBlock().getBiome();
         knownPlaces.add(place);
         locatedBiomes.put(place.biome, locatedBiomes.get(place.biome) + 1);
