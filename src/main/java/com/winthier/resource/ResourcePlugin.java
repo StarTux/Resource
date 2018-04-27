@@ -409,7 +409,7 @@ public final class ResourcePlugin extends JavaPlugin {
         Block block = place.getBlock();
         if (block == null) return;
         unknownPlaces.remove(unknownPlaces.size() - 1);
-        place.biome = place.getBlock().getBiome();
+        place.biome = block.getBiome();
         knownPlaces.add(place);
         locatedBiomes.put(place.biome, locatedBiomes.get(place.biome) + 1);
         dirty = true;
