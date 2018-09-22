@@ -190,7 +190,7 @@ public final class ResourcePlugin extends JavaPlugin {
             Collections.shuffle(knownPlaces, random);
             Place place = null;
             for (Place p: knownPlaces) {
-                if (p.biome != Biome.HELL && p.biome != Biome.OCEAN && p.biome != Biome.DEEP_OCEAN) {
+                if (p.biome != Biome.NETHER && p.biome != Biome.OCEAN && p.biome != Biome.DEEP_OCEAN) {
                     place = p;
                     break;
                 }
@@ -367,8 +367,8 @@ public final class ResourcePlugin extends JavaPlugin {
             for (int z = a.getZ(); z <= b.getZ(); z += biomeDistance) {
                 for (int x = a.getX(); x <= b.getX(); x += biomeDistance) {
                     if (world.getEnvironment() == World.Environment.NETHER) {
-                        knownPlaces.add(new Place(world.getName(), x, z, Biome.HELL));
-                        locatedBiomes.put(Biome.HELL, locatedBiomes.get(Biome.HELL) + 1);
+                        knownPlaces.add(new Place(world.getName(), x, z, Biome.NETHER));
+                        locatedBiomes.put(Biome.NETHER, locatedBiomes.get(Biome.NETHER) + 1);
                     } else {
                         unknownPlaces.add(new Place(world.getName(), x, z));
                     }
