@@ -8,6 +8,7 @@ main: com.winthier.resource.ResourcePlugin
 depend: []
 commands:
   resource:
+    aliases: [ mine ]
     description: User interface
     permission: resource.resource
     usage: /<command> <biome>
