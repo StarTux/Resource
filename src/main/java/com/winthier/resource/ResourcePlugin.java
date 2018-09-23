@@ -173,7 +173,7 @@ public final class ResourcePlugin extends JavaPlugin {
                                        "&a/resource " + lowname + "\n&r&o" + biomeGroup.name,
                                        "/resource " + lowname));
             }
-            Msg.send(player, "&3&lResource Biomes ");
+            Msg.send(player, "&9Mining Biomes");
             Msg.raw(player, message);
             player.sendMessage("");
             return true;
