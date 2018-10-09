@@ -17,9 +17,12 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
-import org.bukkit.ChatColor;
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
@@ -79,43 +82,10 @@ public final class ResourcePlugin extends JavaPlugin {
             return result;
         }
 
-        Block getBlock() {
+        Location getLocation() {
             World bworld = getServer().getWorld(world);
             if (bworld == null) return null;
-            return bworld.getHighestBlockAt(x, z);
-        }
-
-        Block getSaveBlock() {
-            Block block = getBlock();
-            if (block.getWorld().getEnvironment() == World.Environment.NETHER) {
-                for (attempts = 0; attempts < 50; attempts += 1) {
-                    block = block.getWorld().getBlockAt(x + random.nextInt(32) - 16,
-                                                        127,
-                                                        z + random.nextInt(32) - 16);
-                    while (block.getType() != Material.AIR && block.getY() > 0) block = block.getRelative(0, -1, 0);
-                    int air = 0;
-                    while (block.getType() == Material.AIR && block.getY() > 0) {
-                        block = block.getRelative(0, -1, 0);
-                        air += 1;
-                    }
-                    Block block2 = block;
-                    block = block.getRelative(0, 1, 0);
-                    if (air >= 2 && block2.getType().isSolid()) {
-                        break;
-                    }
-                }
-            } else {
-                for (attempts = 0; attempts < 10; attempts += 1) {
-                    block = block.getWorld().getHighestBlockAt(x + random.nextInt(32) - 16,
-                                                               z + random.nextInt(32) - 16);
-                    if (!block.getRelative(0, -1, 0).isLiquid()) break;
-                }
-            }
-            return block;
-        }
-
-        Location getLocation() {
-            return getSaveBlock().getLocation().add(0.5, 0.0, 0.5);
+            return new Location(bworld, (double)x + 0.5, 65.0, (double)z + 0.5, 0.0f, 0.0f);
         }
     }
 
@@ -150,41 +120,41 @@ public final class ResourcePlugin extends JavaPlugin {
         if (cmd == null) {
             List<ChatColor> colors = Arrays.asList(ChatColor.GREEN, ChatColor.AQUA, ChatColor.RED, ChatColor.LIGHT_PURPLE, ChatColor.YELLOW, ChatColor.DARK_AQUA, ChatColor.GOLD, ChatColor.BLUE);
             if (player == null) {
-                Msg.warn(sender, "Player expected");
+                warn(sender, "Player expected");
                 return true;
             }
-            List<Object> message = new ArrayList<>();
-            message.add(" ");
-            message.add(Msg.button(ChatColor.GREEN,
-                                   "[Random]", null,
-                                   "&a/resource random\n&r&oRandom biome",
-                                   "/resource random"));
+            ComponentBuilder cb = new ComponentBuilder("");
+            cb.append("[Random]").color(ChatColor.GREEN)
+                .event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/resource random"))
+                .event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, TextComponent.fromLegacyText(ChatColor.GREEN + "/resource random\n" + ChatColor.RESET + ChatColor.ITALIC + "Random biome")));
             for (BiomeGroup biomeGroup : biomeGroups) {
                 int total = 0;
                 for (Biome biome: biomeGroup.biomes) {
                     total += locatedBiomes.get(biome);
                 }
                 if (total == 0) continue;
-                message.add(" ");
+                cb.append(" ");
                 String lowname = biomeGroup.name.toLowerCase();
                 ChatColor color = colors.get(random.nextInt(colors.size()));
-                message.add(Msg.button(color,
-                                       "[" + biomeGroup.name + "]", null,
-                                       "&a/resource " + lowname + "\n&r&o" + biomeGroup.name,
-                                       "/resource " + lowname));
+                cb.append("[" + biomeGroup.name + "]").color(color)
+                .event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/resource " + lowname))
+                .event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, TextComponent.fromLegacyText(color + "/resource " + lowname + "\n" + ChatColor.RESET + ChatColor.ITALIC + biomeGroup.name)));
             }
-            Msg.send(player, "&9Mining Biomes");
-            Msg.raw(player, message);
+            player.sendMessage("");
+            player.sendMessage("" + ChatColor.BLUE + ChatColor.STRIKETHROUGH + "        " + ChatColor.BLUE + "[ " + ChatColor.WHITE
+                               + "Mining Biomes"
+                               + ChatColor.BLUE + " ]" + ChatColor.STRIKETHROUGH + "        ");
+            player.spigot().sendMessage(cb.create());
             player.sendMessage("");
             return true;
         } else if (cmd.equals("random") && args.length == 1) {
             if (player == null) {
-                Msg.warn(sender, "Player expected");
+                warn(sender, "Player expected");
                 return true;
             }
             int cd = getCooldownInSeconds(player);
             if (cd > 0) {
-                Msg.warn(player, "You have to wait %d more seconds.", cd);
+                warn(player, "You have to wait %d more seconds.", cd);
                 return true;
             }
             Collections.shuffle(knownPlaces, random);
@@ -196,52 +166,46 @@ public final class ResourcePlugin extends JavaPlugin {
                 }
             }
             if (place == null) {
-                Msg.warn(player, "No biomes found.");
+                warn(player, "No biomes found.");
                 return true;
             }
-            Location location = place.getLocation();
-            Location pl = player.getLocation();
-            location.setYaw(pl.getYaw());
-            location.setPitch(pl.getPitch());
-            getLogger().info(String.format("[Random] Warp %s to %s %d,%d,%d (%d attempts)", player.getName(), location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ(), attempts));
-            Msg.info(sender, "Warping to random resource biome.");
-            Msg.sendActionBar(player, "&aWarping to random resource biome");
-            player.teleport(location);
+            info(player, "Warping to random resource biome.");
+            teleport(player, place);
             setCooldownInSeconds(player, playerCooldown);
         } else if (args.length == 1 && cmd.equals("crawl")) {
             if (!sender.hasPermission(PERM_ADMIN)) return false;
             crawl();
-            Msg.send(sender, "&eCompleted one crawler iteration");
+            send(sender, "&eCompleted one crawler iteration");
         } else if (args.length == 1 && cmd.equals("info")) {
             if (!sender.hasPermission(PERM_ADMIN)) return false;
-            Msg.info(sender, "%d known and %d unknown places", knownPlaces.size(), unknownPlaces.size());
+            info(sender, "%d known and %d unknown places", knownPlaces.size(), unknownPlaces.size());
             for (BiomeGroup biomeGroup: biomeGroups) {
                 int total = 0;
                 for (Biome biome: biomeGroup.biomes) {
                     total += locatedBiomes.get(biome);
                 }
-                Msg.send(sender, biomeGroup.name + ": " + total);
+                send(sender, biomeGroup.name + ": " + total);
             }
         } else if (args.length == 1 && cmd.equals("reload")) {
             if (!sender.hasPermission(PERM_ADMIN)) return false;
             loadAll();
-            Msg.send(sender, "&eConfiguration reloaded");
+            send(sender, "&eConfiguration reloaded");
         } else if (args.length == 1 && cmd.equals("save")) {
             if (!sender.hasPermission(PERM_ADMIN)) return false;
             saveAll();
-            Msg.send(sender, "&eConfiguration saved");
+            send(sender, "&eConfiguration saved");
         } else if (args.length == 1 && cmd.equals("setup")) {
             if (!sender.hasPermission(PERM_ADMIN)) return false;
             setup();
-            Msg.send(sender, "&eSetup done. %d known and %d unknown places with a distance of %d blocks.", knownPlaces.size(), unknownPlaces.size(), biomeDistance);
+            send(sender, "&eSetup done. %d known and %d unknown places with a distance of %d blocks.", knownPlaces.size(), unknownPlaces.size(), biomeDistance);
         } else {
             if (player == null) {
-                Msg.warn(sender, "Player expected");
+                warn(sender, "Player expected");
                 return true;
             }
             int cd = getCooldownInSeconds(player);
             if (cd > 0) {
-                Msg.warn(player, "You have to wait %d more seconds.", cd);
+                warn(player, "You have to wait %d more seconds.", cd);
                 return true;
             }
             StringBuilder sb = new StringBuilder(args[0]);
@@ -257,7 +221,7 @@ public final class ResourcePlugin extends JavaPlugin {
                 }
             }
             if (biomeGroup == null) {
-                Msg.warn(player, "Resource biome not found: %s", name);
+                warn(player, "Resource biome not found: %s", name);
                 return true;
             }
             Collections.shuffle(knownPlaces, random);
@@ -269,19 +233,57 @@ public final class ResourcePlugin extends JavaPlugin {
                 }
             }
             if (place == null) {
-                Msg.warn(sender, "No known location for %s.", biomeGroup.name);
+                warn(sender, "No known location for %s.", biomeGroup.name);
                 return true;
             }
-            Location location = place.getLocation();
-            Location pl = player.getLocation();
-            location.setYaw(pl.getYaw());
-            location.setPitch(pl.getPitch());
-            getLogger().info(String.format("[%s] Warp %s to %s %d,%d,%d (%d attempts)", biomeGroup.name, player.getName(), location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ(), attempts));
-            Msg.info(player, "Warping to %s resource biome.", biomeGroup.name);
-            Msg.sendActionBar(player, "&aWarping to %s resource biome.", biomeGroup.name);
-            player.teleport(location);
+            info(player, "Warping to %s resource biome.", biomeGroup.name);
+            teleport(player, place);
             setCooldownInSeconds(player, playerCooldown);
         }
+        return true;
+    }
+
+    boolean teleport(Player player, Place place) {
+        Location pl = player.getLocation();
+        World bworld = getServer().getWorld(place.world);
+        if (bworld == null) return false;
+        bworld.getChunkAtAsync(place.x >> 4, place.z >> 4, (chunk) -> {
+                if (!player.isValid()) return;
+                Location target;
+                if (bworld.getEnvironment() == World.Environment.NETHER) {
+                    int score;
+                    target = null;
+                    BLOCKS:
+                    for (int z = 0; z < 16; z += 1) {
+                        for (int x = 0; x < 16; x += 1) {
+                            score = 0;
+                            for (int y = 112; y > 16; y -= 1) {
+                                Block block = chunk.getBlock(x, y, z);
+                                switch (score) {
+                                case 0: case 1:
+                                    if (block.isEmpty()) score += 1;
+                                    break;
+                                case 2: default:
+                                    if (block.getType().isSolid()) score += 1;
+                                    break;
+                                }
+                                if (score == 3) {
+                                    target = block.getLocation().add(0.5, 1.5, 0.5);
+                                    break BLOCKS;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Block block = bworld.getHighestBlockAt(place.x, place.z);
+                    target = block.getLocation().add(0.5, 1.5, 0.5);
+                }
+                if (target == null) return;
+                target.setYaw(pl.getYaw());
+                target.setPitch(pl.getPitch());
+                player.teleport(target);
+                getLogger().info(String.format("[%s] Warp %s to %s %d,%d,%d", place.biome.name(), player.getName(), target.getWorld().getName(), target.getBlockX(), target.getBlockY(), target.getBlockZ()));
+            });
         return true;
     }
 
@@ -360,12 +362,16 @@ public final class ResourcePlugin extends JavaPlugin {
                 continue;
             }
             double size = world.getWorldBorder().getSize() * 0.5 - 128.0;
-            if (size > 100000.0) size = 100000.0;
-            Block a = world.getWorldBorder().getCenter().add(-size, 0, -size).getBlock();
-            Block b = world.getWorldBorder().getCenter().add(size, 0, size).getBlock();
+            if (size > 50000.0) size = 50000.0;
+            Location a = world.getWorldBorder().getCenter().add(-size, 0, -size);
+            Location b = world.getWorldBorder().getCenter().add(size, 0, size);
+            int ax = a.getBlockX();
+            int az = a.getBlockZ();
+            int bx = b.getBlockX();
+            int bz = b.getBlockZ();
             int count = 0;
-            for (int z = a.getZ(); z <= b.getZ(); z += biomeDistance) {
-                for (int x = a.getX(); x <= b.getX(); x += biomeDistance) {
+            for (int z = az; z <= bz; z += biomeDistance) {
+                for (int x = ax; x <= bx; x += biomeDistance) {
                     if (world.getEnvironment() == World.Environment.NETHER) {
                         knownPlaces.add(new Place(world.getName(), x, z, Biome.NETHER));
                         locatedBiomes.put(Biome.NETHER, locatedBiomes.get(Biome.NETHER) + 1);
@@ -405,22 +411,49 @@ public final class ResourcePlugin extends JavaPlugin {
 
     void crawl() {
         if (unknownPlaces.isEmpty()) return;
-        Place place = unknownPlaces.get(unknownPlaces.size() - 1);
-        Block block = place.getBlock();
-        if (block == null) return;
-        unknownPlaces.remove(unknownPlaces.size() - 1);
-        place.biome = block.getBiome();
-        knownPlaces.add(place);
-        locatedBiomes.put(place.biome, locatedBiomes.get(place.biome) + 1);
-        dirty = true;
-        if (lastSave + 60000L < System.currentTimeMillis()) {
-            saveAll();
-        }
+        Place place = unknownPlaces.remove(unknownPlaces.size() - 1);
+        World bworld = getServer().getWorld(place.world);
+        if (bworld == null) return;
+        int cx = place.x >> 4;
+        int cz = place.z >> 4;
+        bworld.getChunkAtAsync(cx, cz, (c) -> {
+                Block block = bworld.getBlockAt(place.x, 65, place.z);
+                place.biome = block.getBiome();
+                knownPlaces.add(place);
+                locatedBiomes.put(place.biome, locatedBiomes.get(place.biome) + 1);
+                dirty = true;
+                if (lastSave + 60000L < System.currentTimeMillis()) {
+                    saveAll();
+                }
+            });
     }
 
     void resetLocatedBiomes() {
         for (Biome biome: Biome.values()) {
             locatedBiomes.put(biome, 0);
         }
+    }
+
+    // --- Messaging Utility
+
+    String format(String msg, Object... args) {
+        if (msg == null) return "";
+        msg = ChatColor.translateAlternateColorCodes('&', msg);
+        if (args.length > 0) {
+            msg = String.format(msg, args);
+        }
+        return msg;
+    }
+
+    void send(CommandSender to, String msg, Object... args) {
+        to.sendMessage(format(msg, args));
+    }
+
+    void info(CommandSender to, String msg, Object... args) {
+        to.sendMessage(format("&r[&3Resource&r] ") + format(msg, args));
+    }
+
+    void warn(CommandSender to, String msg, Object... args) {
+        to.sendMessage(format("&r[&cResource&r] &c") + format(msg, args));
     }
 }
