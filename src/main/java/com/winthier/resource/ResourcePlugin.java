@@ -260,15 +260,27 @@ public final class ResourcePlugin extends JavaPlugin {
                             for (int y = 112; y > 16; y -= 1) {
                                 Block block = chunk.getBlock(x, y, z);
                                 switch (score) {
-                                case 0: case 1:
-                                    if (block.isEmpty()) score += 1;
-                                    break;
-                                case 2: default:
-                                    if (block.getType().isSolid()) score += 1;
+                                case 0: case 1: {
+                                    if (block.isEmpty()) {
+                                        score += 1;
+                                    } else {
+                                        score = 0;
+                                    }
                                     break;
                                 }
+                                case 2: default: {
+                                    if (block.isEmpty()) {
+                                        continue;
+                                    } else if (block.getType().isSolid()) {
+                                        score += 1;
+                                    } else {
+                                        score = 0;
+                                    }
+                                    break;
+                                }
+                                }
                                 if (score == 3) {
-                                    target = block.getLocation().add(0.5, 1.5, 0.5);
+                                    target = block.getLocation().add(0.5, 1.0, 0.5);
                                     break BLOCKS;
                                 }
                             }
@@ -282,7 +294,7 @@ public final class ResourcePlugin extends JavaPlugin {
                 target.setYaw(pl.getYaw());
                 target.setPitch(pl.getPitch());
                 player.teleport(target);
-                getLogger().info(String.format("[%s] Warp %s to %s %d,%d,%d", place.biome.name(), player.getName(), target.getWorld().getName(), target.getBlockX(), target.getBlockY(), target.getBlockZ()));
+                getLogger().info(String.format("[%s] Warp %s to %s %d,%d,%d (%s) empty=%b", place.biome.name(), player.getName(), target.getWorld().getName(), target.getBlockX(), target.getBlockY(), target.getBlockZ(), target.getBlock().getType(), target.getBlock().isEmpty()));
             });
         return true;
     }
@@ -320,7 +332,7 @@ public final class ResourcePlugin extends JavaPlugin {
                 try {
                     biomes.add(Biome.valueOf(name.toUpperCase()));
                 } catch (IllegalArgumentException iae) {
-                    System.err.println("Unknown biome '" + name + "'. Ignoring");
+                    getLogger().warning("Unknown biome '" + name + "'. Ignoring");
                     iae.printStackTrace();
                 }
             }
