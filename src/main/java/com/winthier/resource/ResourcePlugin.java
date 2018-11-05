@@ -125,8 +125,8 @@ public final class ResourcePlugin extends JavaPlugin {
             }
             ComponentBuilder cb = new ComponentBuilder("");
             cb.append("[Random]").color(ChatColor.GREEN)
-                .event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/resource random"))
-                .event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, TextComponent.fromLegacyText(ChatColor.GREEN + "/resource random\n" + ChatColor.RESET + ChatColor.ITALIC + "Random biome")));
+                .event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/mine random"))
+                .event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, TextComponent.fromLegacyText(ChatColor.GREEN + "/mine random\n" + ChatColor.RESET + ChatColor.ITALIC + "Random biome")));
             for (BiomeGroup biomeGroup : biomeGroups) {
                 int total = 0;
                 for (Biome biome: biomeGroup.biomes) {
@@ -137,8 +137,8 @@ public final class ResourcePlugin extends JavaPlugin {
                 String lowname = biomeGroup.name.toLowerCase();
                 ChatColor color = colors.get(random.nextInt(colors.size()));
                 cb.append("[" + biomeGroup.name + "]").color(color)
-                .event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/resource " + lowname))
-                .event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, TextComponent.fromLegacyText(color + "/resource " + lowname + "\n" + ChatColor.RESET + ChatColor.ITALIC + biomeGroup.name)));
+                .event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/mine " + lowname))
+                .event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, TextComponent.fromLegacyText(color + "/mine " + lowname + "\n" + ChatColor.RESET + ChatColor.ITALIC + biomeGroup.name)));
             }
             player.sendMessage("");
             player.sendMessage("" + ChatColor.BLUE + ChatColor.STRIKETHROUGH + "        " + ChatColor.BLUE + "[ " + ChatColor.WHITE
@@ -169,7 +169,7 @@ public final class ResourcePlugin extends JavaPlugin {
                 warn(player, "No biomes found.");
                 return true;
             }
-            info(player, "Warping to random resource biome.");
+            info(player, "Warping to random mining biome.");
             teleport(player, place);
             setCooldownInSeconds(player, playerCooldown);
         } else if (args.length == 1 && cmd.equals("crawl")) {
@@ -221,7 +221,7 @@ public final class ResourcePlugin extends JavaPlugin {
                 }
             }
             if (biomeGroup == null) {
-                warn(player, "Resource biome not found: %s", name);
+                warn(player, "Mining biome not found: %s", name);
                 return true;
             }
             Collections.shuffle(knownPlaces, random);
@@ -236,7 +236,7 @@ public final class ResourcePlugin extends JavaPlugin {
                 warn(sender, "No known location for %s.", biomeGroup.name);
                 return true;
             }
-            info(player, "Warping to %s resource biome.", biomeGroup.name);
+            info(player, "Warping to %s mining biome.", biomeGroup.name);
             teleport(player, place);
             setCooldownInSeconds(player, playerCooldown);
         }
@@ -462,10 +462,10 @@ public final class ResourcePlugin extends JavaPlugin {
     }
 
     void info(CommandSender to, String msg, Object... args) {
-        to.sendMessage(format("&r[&3Resource&r] ") + format(msg, args));
+        to.sendMessage(format("&r[&3Mine&r] ") + format(msg, args));
     }
 
     void warn(CommandSender to, String msg, Object... args) {
-        to.sendMessage(format("&r[&cResource&r] &c") + format(msg, args));
+        to.sendMessage(format("&r[&cMine&r] &c") + format(msg, args));
     }
 }
