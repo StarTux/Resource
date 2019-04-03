@@ -342,11 +342,16 @@ public final class ResourcePlugin extends JavaPlugin {
         // Places
         knownPlaces.clear();
         unknownPlaces.clear();
-        YamlConfiguration config = YamlConfiguration.loadConfiguration(new File(getDataFolder(), "places.yml"));
-        knownPlaces.addAll(config.getMapList("known").stream().map(m -> new Place(config.createSection("tmp", m))).collect(Collectors.toList()));
-        unknownPlaces.addAll(config.getMapList("unknown").stream().map(m -> new Place(config.createSection("tmp", m))).collect(Collectors.toList()));
-        resetLocatedBiomes();
-        for (Place place: knownPlaces) locatedBiomes.put(place.biome, locatedBiomes.get(place.biome) + 1);
+        File placesFile = new File(getDataFolder(), "places.yml");
+        if (placesFile.exists()) {
+            YamlConfiguration config = YamlConfiguration.loadConfiguration(placesFile);
+            knownPlaces.addAll(config.getMapList("known").stream().map(m -> new Place(config.createSection("tmp", m))).collect(Collectors.toList()));
+            unknownPlaces.addAll(config.getMapList("unknown").stream().map(m -> new Place(config.createSection("tmp", m))).collect(Collectors.toList()));
+            resetLocatedBiomes();
+            for (Place place: knownPlaces) locatedBiomes.put(place.biome, locatedBiomes.get(place.biome) + 1);
+        } else {
+            setup();
+        }
     }
 
     void saveAll() {
