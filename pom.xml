@@ -1,30 +1,36 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project>
   <modelVersion>4.0.0</modelVersion>
+
   <groupId>com.winthier.resource</groupId>
   <artifactId>resource</artifactId>
-  <packaging>jar</packaging>
   <version>0.1</version>
+
   <name>Resource</name>
-  <url>https://cavetale.com</url>
+  <packaging>jar</packaging>
+  <url>https://github.com/StarTux/Resource</url>
+
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   <repositories>
+
     <!-- Paper Repo -->
     <repository>
       <id>papermc</id>
       <url>https://papermc.io/repo/repository/maven-public/</url>
     </repository>
+
   </repositories>
   <dependencies>
-    <!-- Paper-API -->
+
+    <!-- Paper API -->
     <dependency>
       <groupId>com.destroystokyo.paper</groupId>
       <artifactId>paper-api</artifactId>
-      <version>1.13.1-R0.1-SNAPSHOT</version>
+      <version>1.15.1-R0.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
+
     <!-- Lombok -->
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -32,10 +38,12 @@
       <version>1.14.8</version>
       <scope>provided</scope>
     </dependency>
+
   </dependencies>
   <build>
     <finalName>${project.name}</finalName>
     <plugins>
+
       <!-- Java 8 -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -51,6 +59,7 @@
           </compilerArgs>
         </configuration>
       </plugin>
+
     </plugins>
   </build>
 </project>

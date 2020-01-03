@@ -18,6 +18,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
@@ -55,14 +56,15 @@ public final class ResourcePlugin extends JavaPlugin {
     @AllArgsConstructor
     final class Place {
         private final String world;
-        private final int x, z;
+        private final int x;
+        private final int z;
         private Biome biome;
 
-        Place(String world, int x, int z) {
-            this(world, x, z, (Biome)null);
+        Place(final String world, final int x, final int z) {
+            this(world, x, z, (Biome) null);
         }
 
-        Place(ConfigurationSection config) {
+        Place(final ConfigurationSection config) {
             this.world = config.getString("world");
             this.x = config.getInt("x");
             this.z = config.getInt("z");
@@ -85,7 +87,7 @@ public final class ResourcePlugin extends JavaPlugin {
         Location getLocation() {
             World bworld = getServer().getWorld(world);
             if (bworld == null) return null;
-            return new Location(bworld, (double)x + 0.5, 65.0, (double)z + 0.5, 0.0f, 0.0f);
+            return new Location(bworld, (double) x + 0.5, 65.0, (double) z + 0.5, 0.0f, 0.0f);
         }
     }
 
@@ -93,7 +95,7 @@ public final class ResourcePlugin extends JavaPlugin {
         final String name;
         final Set<Biome> biomes = EnumSet.noneOf(Biome.class);
 
-        BiomeGroup(String name, Collection<Biome> biomes) {
+        BiomeGroup(final String name, final Collection<Biome> biomes) {
             this.name = name;
             this.biomes.addAll(biomes);
         }
@@ -115,18 +117,23 @@ public final class ResourcePlugin extends JavaPlugin {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        Player player = sender instanceof Player ? (Player)sender : null;
+        Player player = sender instanceof Player ? (Player) sender : null;
         String cmd = args.length > 0 ? args[0].toLowerCase() : null;
         if (cmd == null) {
-            List<ChatColor> colors = Arrays.asList(ChatColor.GREEN, ChatColor.AQUA, ChatColor.RED, ChatColor.LIGHT_PURPLE, ChatColor.YELLOW, ChatColor.DARK_AQUA, ChatColor.GOLD, ChatColor.BLUE);
+            List<ChatColor> colors = Arrays
+                .asList(ChatColor.GREEN, ChatColor.AQUA, ChatColor.RED, ChatColor.LIGHT_PURPLE,
+                        ChatColor.YELLOW, ChatColor.DARK_AQUA, ChatColor.GOLD, ChatColor.BLUE);
             if (player == null) {
                 warn(sender, "Player expected");
                 return true;
             }
             ComponentBuilder cb = new ComponentBuilder("");
-            cb.append("[Random]").color(ChatColor.GREEN)
-                .event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/mine random"))
-                .event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, TextComponent.fromLegacyText(ChatColor.GREEN + "/mine random\n" + ChatColor.RESET + ChatColor.ITALIC + "Random biome")));
+            cb.append("[Random]").color(ChatColor.GREEN);
+            cb.event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/mine random"));
+            BaseComponent[] tooltip = TextComponent
+                .fromLegacyText(ChatColor.GREEN + "/mine random\n"
+                                + ChatColor.RESET + ChatColor.ITALIC + "Random biome");
+            cb.event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, tooltip));
             for (BiomeGroup biomeGroup : biomeGroups) {
                 int total = 0;
                 for (Biome biome: biomeGroup.biomes) {
@@ -136,13 +143,17 @@ public final class ResourcePlugin extends JavaPlugin {
                 cb.append(" ");
                 String lowname = biomeGroup.name.toLowerCase();
                 ChatColor color = colors.get(random.nextInt(colors.size()));
-                cb.append("[" + biomeGroup.name + "]").color(color)
-                .event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/mine " + lowname))
-                .event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, TextComponent.fromLegacyText(color + "/mine " + lowname + "\n" + ChatColor.RESET + ChatColor.ITALIC + biomeGroup.name)));
+                cb.append("[" + biomeGroup.name + "]").color(color);
+                cb.event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/mine " + lowname));
+                tooltip = TextComponent
+                    .fromLegacyText(color + "/mine " + lowname + "\n"
+                                    + ChatColor.RESET + ChatColor.ITALIC + biomeGroup.name);
+                cb.event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, tooltip));
             }
             player.sendMessage("");
-            player.sendMessage("" + ChatColor.BLUE + ChatColor.STRIKETHROUGH + "        " + ChatColor.BLUE + "[ " + ChatColor.WHITE
-                               + "Mining Biomes"
+            player.sendMessage(""
+                               + ChatColor.BLUE + ChatColor.STRIKETHROUGH + "        "
+                               + ChatColor.BLUE + "[ " + ChatColor.WHITE + "Mining Biomes"
                                + ChatColor.BLUE + " ]" + ChatColor.STRIKETHROUGH + "        ");
             player.spigot().sendMessage(cb.create());
             player.sendMessage("");
@@ -160,7 +171,9 @@ public final class ResourcePlugin extends JavaPlugin {
             Collections.shuffle(knownPlaces, random);
             Place place = null;
             for (Place p: knownPlaces) {
-                if (p.biome != Biome.NETHER && p.biome != Biome.OCEAN && p.biome != Biome.DEEP_OCEAN) {
+                if (p.biome != Biome.NETHER
+                    && p.biome != Biome.OCEAN
+                    && p.biome != Biome.DEEP_OCEAN) {
                     place = p;
                     break;
                 }
@@ -178,7 +191,8 @@ public final class ResourcePlugin extends JavaPlugin {
             send(sender, "&eCompleted one crawler iteration");
         } else if (args.length == 1 && cmd.equals("info")) {
             if (!sender.hasPermission(PERM_ADMIN)) return false;
-            info(sender, "%d known and %d unknown places", knownPlaces.size(), unknownPlaces.size());
+            info(sender, "%d known and %d unknown places",
+                 knownPlaces.size(), unknownPlaces.size());
             for (BiomeGroup biomeGroup: biomeGroups) {
                 int total = 0;
                 for (Biome biome: biomeGroup.biomes) {
@@ -197,7 +211,9 @@ public final class ResourcePlugin extends JavaPlugin {
         } else if (args.length == 1 && cmd.equals("setup")) {
             if (!sender.hasPermission(PERM_ADMIN)) return false;
             setup();
-            send(sender, "&eSetup done. %d known and %d unknown places with a distance of %d blocks.", knownPlaces.size(), unknownPlaces.size(), biomeDistance);
+            send(sender,
+                 "&eSetup done. %d known and %d unknown places with a distance of %d blocks.",
+                 knownPlaces.size(), unknownPlaces.size(), biomeDistance);
         } else {
             if (player == null) {
                 warn(sender, "Player expected");
@@ -294,13 +310,18 @@ public final class ResourcePlugin extends JavaPlugin {
                 target.setYaw(pl.getYaw());
                 target.setPitch(pl.getPitch());
                 player.teleport(target);
-                getLogger().info(String.format("[%s] Warp %s to %s %d,%d,%d (%s) empty=%b", place.biome.name(), player.getName(), target.getWorld().getName(), target.getBlockX(), target.getBlockY(), target.getBlockZ(), target.getBlock().getType(), target.getBlock().isEmpty()));
+                String log = String
+                    .format("[%s] Warp %s to %s %d %d %d (%s)",
+                            place.biome.name(), player.getName(), target.getWorld().getName(),
+                            target.getBlockX(), target.getBlockY(), target.getBlockZ());
+                getLogger().info(log);
             });
         return true;
     }
 
     @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+    public List<String> onTabComplete(CommandSender sender, Command command,
+                                      String alias, String[] args) {
         String arg = args.length == 0 ? "" : args[args.length - 1].toLowerCase();
         if (args.length == 0 || args.length == 1) {
             List<String> result = new ArrayList<>();
@@ -345,10 +366,16 @@ public final class ResourcePlugin extends JavaPlugin {
         File placesFile = new File(getDataFolder(), "places.yml");
         if (placesFile.exists()) {
             YamlConfiguration config = YamlConfiguration.loadConfiguration(placesFile);
-            knownPlaces.addAll(config.getMapList("known").stream().map(m -> new Place(config.createSection("tmp", m))).collect(Collectors.toList()));
-            unknownPlaces.addAll(config.getMapList("unknown").stream().map(m -> new Place(config.createSection("tmp", m))).collect(Collectors.toList()));
+            knownPlaces.addAll(config.getMapList("known").stream()
+                               .map(m -> new Place(config.createSection("tmp", m)))
+                               .collect(Collectors.toList()));
+            unknownPlaces.addAll(config.getMapList("unknown").stream()
+                                 .map(m -> new Place(config.createSection("tmp", m)))
+                                 .collect(Collectors.toList()));
             resetLocatedBiomes();
-            for (Place place: knownPlaces) locatedBiomes.put(place.biome, locatedBiomes.get(place.biome) + 1);
+            for (Place place: knownPlaces) {
+                locatedBiomes.put(place.biome, locatedBiomes.get(place.biome) + 1);
+            }
         } else {
             setup();
         }
@@ -358,8 +385,12 @@ public final class ResourcePlugin extends JavaPlugin {
         dirty = false;
         lastSave = System.currentTimeMillis();
         YamlConfiguration biomes = new YamlConfiguration();
-        biomes.set("known", knownPlaces.stream().map(p -> p.serialize()).collect(Collectors.toList()));
-        biomes.set("unknown", unknownPlaces.stream().map(p -> p.serialize()).collect(Collectors.toList()));
+        biomes.set("known", knownPlaces.stream()
+                   .map(p -> p.serialize())
+                   .collect(Collectors.toList()));
+        biomes.set("unknown", unknownPlaces.stream()
+                   .map(p -> p.serialize())
+                   .collect(Collectors.toList()));
         File file = new File(getDataFolder(), "places.yml");
         try {
             biomes.save(file);
@@ -405,7 +436,7 @@ public final class ResourcePlugin extends JavaPlugin {
     }
 
     void setCooldownInSeconds(Player player, int sec) {
-        long time = System.currentTimeMillis() + (long)sec * 1000;
+        long time = System.currentTimeMillis() + (long) sec * 1000;
         cooldowns.put(player.getUniqueId(), time);
     }
 
@@ -414,7 +445,7 @@ public final class ResourcePlugin extends JavaPlugin {
         if (time == null) return 0;
         long result = time - System.currentTimeMillis();
         if (result < 0) return 0;
-        return (int)(result / 1000);
+        return (int) (result / 1000);
     }
 
     void onTick() {
@@ -434,7 +465,7 @@ public final class ResourcePlugin extends JavaPlugin {
         int cx = place.x >> 4;
         int cz = place.z >> 4;
         bworld.getChunkAtAsync(cx, cz, (c) -> {
-                Block block = bworld.getBlockAt(place.x, 65, place.z);
+                Block block = bworld.getHighestBlockAt(place.x, place.z);
                 place.biome = block.getBiome();
                 knownPlaces.add(place);
                 locatedBiomes.put(place.biome, locatedBiomes.get(place.biome) + 1);
