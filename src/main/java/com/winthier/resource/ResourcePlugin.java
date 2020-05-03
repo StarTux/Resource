@@ -1,7 +1,11 @@
 package com.winthier.resource;
 
+import com.google.gson.Gson;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -15,6 +19,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import net.md_5.bungee.api.ChatColor;
@@ -43,8 +48,6 @@ public final class ResourcePlugin extends JavaPlugin {
     private int biomeDistance = 256;
     private final List<String> worldNames = new ArrayList<>();
     private final List<BiomeGroup> biomeGroups = new ArrayList<>();
-    private final List<Place> knownPlaces = new ArrayList<>();
-    private final List<Place> unknownPlaces = new ArrayList<>();
     private final EnumMap<Biome, Integer> locatedBiomes = new EnumMap<>(Biome.class);
     // State
     private final Map<UUID, Long> cooldowns = new HashMap<>();
@@ -52,13 +55,15 @@ public final class ResourcePlugin extends JavaPlugin {
     private boolean dirty;
     private long lastSave;
     private int attempts;
+    Persistence persistence = new Persistence();
+    Gson gson = new Gson();
 
     @AllArgsConstructor
     final class Place {
-        private final String world;
-        private final int x;
-        private final int z;
-        private Biome biome;
+        String world;
+        int x;
+        int z;
+        Biome biome;
 
         Place(final String world, final int x, final int z) {
             this(world, x, z, (Biome) null);
@@ -89,6 +94,11 @@ public final class ResourcePlugin extends JavaPlugin {
             if (bworld == null) return null;
             return new Location(bworld, (double) x + 0.5, 65.0, (double) z + 0.5, 0.0f, 0.0f);
         }
+    }
+
+    final class Persistence {
+        List<Place> knownPlaces = new ArrayList<>();
+        List<Place> unknownPlaces = new ArrayList<>();
     }
 
     final class BiomeGroup {
@@ -168,9 +178,9 @@ public final class ResourcePlugin extends JavaPlugin {
                 warn(player, "You have to wait %d more seconds.", cd);
                 return true;
             }
-            Collections.shuffle(knownPlaces, random);
+            Collections.shuffle(persistence.knownPlaces, random);
             Place place = null;
-            for (Place p: knownPlaces) {
+            for (Place p: persistence.knownPlaces) {
                 if (p.biome != Biome.NETHER
                     && p.biome != Biome.OCEAN
                     && p.biome != Biome.DEEP_OCEAN) {
@@ -192,7 +202,7 @@ public final class ResourcePlugin extends JavaPlugin {
         } else if (args.length == 1 && cmd.equals("info")) {
             if (!sender.hasPermission(PERM_ADMIN)) return false;
             info(sender, "%d known and %d unknown places",
-                 knownPlaces.size(), unknownPlaces.size());
+                 persistence.knownPlaces.size(), persistence.unknownPlaces.size());
             for (BiomeGroup biomeGroup: biomeGroups) {
                 int total = 0;
                 for (Biome biome: biomeGroup.biomes) {
@@ -213,7 +223,7 @@ public final class ResourcePlugin extends JavaPlugin {
             setup();
             send(sender,
                  "&eSetup done. %d known and %d unknown places with a distance of %d blocks.",
-                 knownPlaces.size(), unknownPlaces.size(), biomeDistance);
+                 persistence.knownPlaces.size(), persistence.unknownPlaces.size(), biomeDistance);
         } else {
             if (player == null) {
                 warn(sender, "Player expected");
@@ -240,9 +250,9 @@ public final class ResourcePlugin extends JavaPlugin {
                 warn(player, "Mining biome not found: %s", name);
                 return true;
             }
-            Collections.shuffle(knownPlaces, random);
+            Collections.shuffle(persistence.knownPlaces, random);
             Place place = null;
-            for (Place p: knownPlaces) {
+            for (Place p: persistence.knownPlaces) {
                 if (biomeGroup.biomes.contains(p.biome)) {
                     place = p;
                     break;
@@ -361,19 +371,27 @@ public final class ResourcePlugin extends JavaPlugin {
         }
         cooldowns.clear();
         // Places
-        knownPlaces.clear();
-        unknownPlaces.clear();
+        persistence = new Persistence();
+        File file = new File(getDataFolder(), "places.json");
         File placesFile = new File(getDataFolder(), "places.yml");
-        if (placesFile.exists()) {
+        if (file.exists()) {
+            if (placesFile.exists()) placesFile.delete();
+            try (FileReader in = new FileReader(file)) {
+                persistence = gson.fromJson(in, Persistence.class);
+            } catch (IOException ioe) {
+                getLogger().log(Level.SEVERE, "Loading persistence", ioe);
+            }
+        } else if (placesFile.exists()) {
+            // Legacy
             YamlConfiguration config = YamlConfiguration.loadConfiguration(placesFile);
-            knownPlaces.addAll(config.getMapList("known").stream()
-                               .map(m -> new Place(config.createSection("tmp", m)))
-                               .collect(Collectors.toList()));
-            unknownPlaces.addAll(config.getMapList("unknown").stream()
-                                 .map(m -> new Place(config.createSection("tmp", m)))
-                                 .collect(Collectors.toList()));
+            persistence.knownPlaces.addAll(config.getMapList("known").stream()
+                                           .map(m -> new Place(config.createSection("tmp", m)))
+                                           .collect(Collectors.toList()));
+            persistence.unknownPlaces.addAll(config.getMapList("unknown").stream()
+                                             .map(m -> new Place(config.createSection("tmp", m)))
+                                             .collect(Collectors.toList()));
             resetLocatedBiomes();
-            for (Place place: knownPlaces) {
+            for (Place place: persistence.knownPlaces) {
                 locatedBiomes.put(place.biome, locatedBiomes.get(place.biome) + 1);
             }
         } else {
@@ -384,24 +402,28 @@ public final class ResourcePlugin extends JavaPlugin {
     void saveAll() {
         dirty = false;
         lastSave = System.currentTimeMillis();
-        YamlConfiguration biomes = new YamlConfiguration();
-        biomes.set("known", knownPlaces.stream()
-                   .map(p -> p.serialize())
-                   .collect(Collectors.toList()));
-        biomes.set("unknown", unknownPlaces.stream()
-                   .map(p -> p.serialize())
-                   .collect(Collectors.toList()));
-        File file = new File(getDataFolder(), "places.yml");
-        try {
-            biomes.save(file);
-        } catch (IOException ioe) {
-            ioe.printStackTrace();
+        File file = new File(getDataFolder(), "places.json");
+        if (isEnabled()) {
+            String json = gson.toJson(persistence);
+            getServer().getScheduler().runTaskAsynchronously(this, () -> {
+                    try (PrintStream out = new PrintStream(file)) {
+                        out.print(json);
+                    } catch (IOException ioe) {
+                        getLogger().log(Level.SEVERE, "Saving persistence async", ioe);
+                    }
+                });
+        } else {
+            // onDiable(): Sync
+            try (FileWriter out = new FileWriter(file)) {
+                gson.toJson(persistence, out);
+            } catch (IOException ioe) {
+                getLogger().log(Level.SEVERE, "Saving persistence sync", ioe);
+            }
         }
     }
 
     void setup() {
-        knownPlaces.clear();
-        unknownPlaces.clear();
+        persistence = new Persistence();
         resetLocatedBiomes();
         for (String worldName: worldNames) {
             World world = getServer().getWorld(worldName);
@@ -421,17 +443,17 @@ public final class ResourcePlugin extends JavaPlugin {
             for (int z = az; z <= bz; z += biomeDistance) {
                 for (int x = ax; x <= bx; x += biomeDistance) {
                     if (world.getEnvironment() == World.Environment.NETHER) {
-                        knownPlaces.add(new Place(world.getName(), x, z, Biome.NETHER));
+                        persistence.knownPlaces.add(new Place(world.getName(), x, z, Biome.NETHER));
                         locatedBiomes.put(Biome.NETHER, locatedBiomes.get(Biome.NETHER) + 1);
                     } else {
-                        unknownPlaces.add(new Place(world.getName(), x, z));
+                        persistence.unknownPlaces.add(new Place(world.getName(), x, z));
                     }
                     count += 1;
                 }
             }
             getLogger().info("Setup: " + world.getName() + " has " + count + " places.");
         }
-        Collections.shuffle(unknownPlaces, random);
+        Collections.shuffle(persistence.unknownPlaces, random);
         saveAll();
     }
 
@@ -458,8 +480,8 @@ public final class ResourcePlugin extends JavaPlugin {
     }
 
     void crawl() {
-        if (unknownPlaces.isEmpty()) return;
-        Place place = unknownPlaces.remove(unknownPlaces.size() - 1);
+        if (persistence.unknownPlaces.isEmpty()) return;
+        Place place = persistence.unknownPlaces.remove(persistence.unknownPlaces.size() - 1);
         World bworld = getServer().getWorld(place.world);
         if (bworld == null) return;
         int cx = place.x >> 4;
@@ -467,7 +489,7 @@ public final class ResourcePlugin extends JavaPlugin {
         bworld.getChunkAtAsync(cx, cz, (c) -> {
                 Block block = bworld.getHighestBlockAt(place.x, place.z);
                 place.biome = block.getBiome();
-                knownPlaces.add(place);
+                persistence.knownPlaces.add(place);
                 locatedBiomes.put(place.biome, locatedBiomes.get(place.biome) + 1);
                 dirty = true;
                 if (lastSave + 60000L < System.currentTimeMillis()) {
