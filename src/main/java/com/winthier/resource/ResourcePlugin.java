@@ -20,7 +20,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
-import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;
@@ -35,7 +34,6 @@ import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -373,26 +371,12 @@ public final class ResourcePlugin extends JavaPlugin {
         // Places
         persistence = new Persistence();
         File file = new File(getDataFolder(), "places.json");
-        File placesFile = new File(getDataFolder(), "places.yml");
         if (file.exists()) {
             if (placesFile.exists()) placesFile.delete();
             try (FileReader in = new FileReader(file)) {
                 persistence = gson.fromJson(in, Persistence.class);
             } catch (IOException ioe) {
                 getLogger().log(Level.SEVERE, "Loading persistence", ioe);
-            }
-        } else if (placesFile.exists()) {
-            // Legacy
-            YamlConfiguration config = YamlConfiguration.loadConfiguration(placesFile);
-            persistence.knownPlaces.addAll(config.getMapList("known").stream()
-                                           .map(m -> new Place(config.createSection("tmp", m)))
-                                           .collect(Collectors.toList()));
-            persistence.unknownPlaces.addAll(config.getMapList("unknown").stream()
-                                             .map(m -> new Place(config.createSection("tmp", m)))
-                                             .collect(Collectors.toList()));
-            resetLocatedBiomes();
-            for (Place place: persistence.knownPlaces) {
-                locatedBiomes.put(place.biome, locatedBiomes.get(place.biome) + 1);
             }
         } else {
             setup();
