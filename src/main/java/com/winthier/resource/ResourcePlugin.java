@@ -372,11 +372,14 @@ public final class ResourcePlugin extends JavaPlugin {
         persistence = new Persistence();
         File file = new File(getDataFolder(), "places.json");
         if (file.exists()) {
-            if (placesFile.exists()) placesFile.delete();
             try (FileReader in = new FileReader(file)) {
                 persistence = gson.fromJson(in, Persistence.class);
             } catch (IOException ioe) {
                 getLogger().log(Level.SEVERE, "Loading persistence", ioe);
+            }
+            resetLocatedBiomes();
+            for (Place place: persistence.knownPlaces) {
+                locatedBiomes.put(place.biome, locatedBiomes.get(place.biome) + 1);
             }
         } else {
             setup();
