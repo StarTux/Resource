@@ -179,7 +179,7 @@ public final class ResourcePlugin extends JavaPlugin {
             Collections.shuffle(persistence.knownPlaces, random);
             Place place = null;
             for (Place p: persistence.knownPlaces) {
-                if (p.biome != Biome.NETHER
+                if (!p.world.contains("nether")
                     && p.biome != Biome.OCEAN
                     && p.biome != Biome.DEEP_OCEAN) {
                     place = p;
@@ -429,12 +429,7 @@ public final class ResourcePlugin extends JavaPlugin {
             int count = 0;
             for (int z = az; z <= bz; z += biomeDistance) {
                 for (int x = ax; x <= bx; x += biomeDistance) {
-                    if (world.getEnvironment() == World.Environment.NETHER) {
-                        persistence.knownPlaces.add(new Place(world.getName(), x, z, Biome.NETHER));
-                        locatedBiomes.put(Biome.NETHER, locatedBiomes.get(Biome.NETHER) + 1);
-                    } else {
-                        persistence.unknownPlaces.add(new Place(world.getName(), x, z));
-                    }
+                    persistence.unknownPlaces.add(new Place(world.getName(), x, z));
                     count += 1;
                 }
             }
