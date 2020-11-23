@@ -319,7 +319,7 @@ public final class ResourcePlugin extends JavaPlugin {
                 target.setPitch(pl.getPitch());
                 player.teleport(target);
                 String log = String
-                    .format("[%s] Warp %s to %s %d %d %d (%s)",
+                    .format("[%s] Warp %s to %s %d %d %d",
                             place.biome.name(), player.getName(), target.getWorld().getName(),
                             target.getBlockX(), target.getBlockY(), target.getBlockZ());
                 getLogger().info(log);
@@ -328,8 +328,7 @@ public final class ResourcePlugin extends JavaPlugin {
     }
 
     @Override
-    public List<String> onTabComplete(CommandSender sender, Command command,
-                                      String alias, String[] args) {
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         String arg = args.length == 0 ? "" : args[args.length - 1].toLowerCase();
         if (args.length == 0 || args.length == 1) {
             List<String> result = new ArrayList<>();
