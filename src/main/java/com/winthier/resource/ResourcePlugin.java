@@ -21,12 +21,11 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 import lombok.AllArgsConstructor;
-import net.md_5.bungee.api.ChatColor;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
@@ -128,43 +127,51 @@ public final class ResourcePlugin extends JavaPlugin {
         Player player = sender instanceof Player ? (Player) sender : null;
         String cmd = args.length > 0 ? args[0].toLowerCase() : null;
         if (cmd == null) {
-            List<ChatColor> colors = Arrays
-                .asList(ChatColor.GREEN, ChatColor.AQUA, ChatColor.RED, ChatColor.LIGHT_PURPLE,
-                        ChatColor.YELLOW, ChatColor.DARK_AQUA, ChatColor.GOLD, ChatColor.BLUE);
+            List<NamedTextColor> colors = Arrays
+                .asList(NamedTextColor.GREEN, NamedTextColor.AQUA, NamedTextColor.RED, NamedTextColor.LIGHT_PURPLE,
+                        NamedTextColor.YELLOW, NamedTextColor.DARK_AQUA, NamedTextColor.GOLD, NamedTextColor.BLUE);
             if (player == null) {
                 warn(sender, "Player expected");
                 return true;
             }
-            ComponentBuilder cb = new ComponentBuilder("");
-            cb.append("[Random]").color(ChatColor.GREEN);
-            cb.event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/mine random"));
-            BaseComponent[] tooltip = TextComponent
-                .fromLegacyText(ChatColor.GREEN + "/mine random\n"
-                                + ChatColor.RESET + ChatColor.ITALIC + "Random biome");
-            cb.event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, tooltip));
+            List<Component> biomeList = new ArrayList<>();
+            biomeList.add((Component.text().content("[Random]").color(NamedTextColor.GREEN))
+                          .clickEvent(ClickEvent.runCommand("/mine random"))
+                          .hoverEvent(Component.text()
+                                      .append(Component.text("/mine random", NamedTextColor.GREEN))
+                                      .append(Component.newline())
+                                      .append(Component.text("Random biome", NamedTextColor.GRAY))
+                                      .build())
+                          .build());
             for (BiomeGroup biomeGroup : biomeGroups) {
                 int total = 0;
                 for (Biome biome: biomeGroup.biomes) {
                     total += locatedBiomes.get(biome);
                 }
                 if (total == 0) continue;
-                cb.append(" ");
                 String lowname = biomeGroup.name.toLowerCase();
-                ChatColor color = colors.get(random.nextInt(colors.size()));
-                cb.append("[" + biomeGroup.name + "]").color(color);
-                cb.event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/mine " + lowname));
-                tooltip = TextComponent
-                    .fromLegacyText(color + "/mine " + lowname + "\n"
-                                    + ChatColor.RESET + ChatColor.ITALIC + biomeGroup.name);
-                cb.event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, tooltip));
+                NamedTextColor color = colors.get(random.nextInt(colors.size()));
+                biomeList.add(Component.text().content("[" + biomeGroup.name + "]").color(color)
+                              .clickEvent(ClickEvent.runCommand("/mine " + lowname))
+                              .hoverEvent(Component.text()
+                                          .append(Component.text("/mine " + lowname, color))
+                                          .append(Component.newline())
+                                          .append(Component.text(biomeGroup.name, NamedTextColor.WHITE))
+                                          .build())
+                              .build());
             }
-            player.sendMessage("");
-            player.sendMessage(""
-                               + ChatColor.BLUE + ChatColor.STRIKETHROUGH + "        "
-                               + ChatColor.BLUE + "[ " + ChatColor.WHITE + "Mining Biomes"
-                               + ChatColor.BLUE + " ]" + ChatColor.STRIKETHROUGH + "        ");
-            player.spigot().sendMessage(cb.create());
-            player.sendMessage("");
+            player.sendMessage(Component.text()
+                               .append(Component.empty())
+                               .append(Component.newline())
+                               .append(Component.text("        ", NamedTextColor.BLUE, TextDecoration.STRIKETHROUGH))
+                               .append(Component.text("[ ", NamedTextColor.BLUE))
+                               .append(Component.text("Mining Biomes", NamedTextColor.WHITE))
+                               .append(Component.text(" ]", NamedTextColor.BLUE))
+                               .append(Component.text("        ", NamedTextColor.BLUE, TextDecoration.STRIKETHROUGH))
+                               .append(Component.newline())
+                               .append(Component.join(Component.space(), biomeList))
+                               .append(Component.newline())
+                               .append(Component.empty()));
             return true;
         } else if (cmd.equals("random") && args.length == 1) {
             if (player == null) {
