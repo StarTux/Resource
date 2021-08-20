@@ -1,5 +1,7 @@
 package com.winthier.resource;
 
+import com.cavetale.core.event.player.PluginPlayerEvent.Detail;
+import com.cavetale.core.event.player.PluginPlayerEvent;
 import com.google.gson.Gson;
 import java.io.File;
 import java.io.FileReader;
@@ -34,6 +36,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class ResourcePlugin extends JavaPlugin {
@@ -198,7 +201,11 @@ public final class ResourcePlugin extends JavaPlugin {
                 return true;
             }
             info(player, "Warping to random mining biome.");
-            teleport(player, place);
+            teleport(player, place, () -> {
+                    PluginPlayerEvent.Name.USE_MINE.ultimate(this, player)
+                        .detail(Detail.NAME, "random")
+                        .call();
+                });
             setCooldownInSeconds(player, playerCooldown);
         } else if (args.length == 1 && cmd.equals("crawl")) {
             if (!sender.hasPermission(PERM_ADMIN)) return false;
@@ -239,11 +246,7 @@ public final class ResourcePlugin extends JavaPlugin {
                 warn(player, "You have to wait %d more seconds.", cd);
                 return true;
             }
-            StringBuilder sb = new StringBuilder(args[0]);
-            for (int j = 1; j < args.length; ++j) {
-                sb.append(" ").append(args[j]);
-            }
-            String name = sb.toString();
+            final String name = String.join(" ", args);
             BiomeGroup biomeGroup = null;
             for (BiomeGroup bg: biomeGroups) {
                 if (bg.name.equalsIgnoreCase(name)) {
@@ -257,7 +260,7 @@ public final class ResourcePlugin extends JavaPlugin {
             }
             Collections.shuffle(persistence.knownPlaces, random);
             Place place = null;
-            for (Place p: persistence.knownPlaces) {
+            for (Place p : persistence.knownPlaces) {
                 if (biomeGroup.biomes.contains(p.biome)) {
                     place = p;
                     break;
@@ -268,13 +271,17 @@ public final class ResourcePlugin extends JavaPlugin {
                 return true;
             }
             info(player, "Warping to %s mining biome.", biomeGroup.name);
-            teleport(player, place);
+            teleport(player, place, () -> {
+                    PluginPlayerEvent.Name.USE_MINE.ultimate(this, player)
+                        .detail(Detail.NAME, name.toLowerCase())
+                        .call();
+                });
             setCooldownInSeconds(player, playerCooldown);
         }
         return true;
     }
 
-    boolean teleport(Player player, Place place) {
+    boolean teleport(Player player, Place place, Runnable callback) {
         Location pl = player.getLocation();
         World bworld = getServer().getWorld(place.world);
         if (bworld == null) return false;
@@ -324,12 +331,13 @@ public final class ResourcePlugin extends JavaPlugin {
                 if (target == null) return;
                 target.setYaw(pl.getYaw());
                 target.setPitch(pl.getPitch());
-                player.teleport(target);
+                player.teleport(target, TeleportCause.COMMAND);
                 String log = String
                     .format("[%s] Warp %s to %s %d %d %d",
                             place.biome.name(), player.getName(), target.getWorld().getName(),
                             target.getBlockX(), target.getBlockY(), target.getBlockZ());
                 getLogger().info(log);
+                if (callback != null) callback.run();
             });
         return true;
     }

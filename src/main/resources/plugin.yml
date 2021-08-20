@@ -1,21 +1,28 @@
+main: com.winthier.resource.ResourcePlugin
 name: Resource
-description: Warp to resource biomes
-author: StarTux
 version: 0.1
 api-version: 1.17
+
+description: Warp to resource biomes
+author: StarTux
 website: https://cavetale.com
-main: com.winthier.resource.ResourcePlugin
-depend: []
+
+depend: [Core]
+
 commands:
+
   resource:
     aliases: [ mine, mining ]
     description: User interface
     permission: resource.resource
     usage: /<command> <biome>
+
 permissions:
+
   resource.resource:
     description: Use /resource
     default: op
+
   resource.admin:
     description: Use admin subcommands
     default: op
