@@ -21,13 +21,16 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import lombok.AllArgsConstructor;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.ChatColor;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
@@ -172,7 +175,7 @@ public final class ResourcePlugin extends JavaPlugin {
                                .append(Component.text(" ]", NamedTextColor.BLUE))
                                .append(Component.text("        ", NamedTextColor.BLUE, TextDecoration.STRIKETHROUGH))
                                .append(Component.newline())
-                               .append(Component.join(Component.space(), biomeList))
+                               .append(Component.join(JoinConfiguration.separator(Component.space()), biomeList))
                                .append(Component.newline())
                                .append(Component.empty()));
             return true;
@@ -285,7 +288,7 @@ public final class ResourcePlugin extends JavaPlugin {
         Location pl = player.getLocation();
         World bworld = getServer().getWorld(place.world);
         if (bworld == null) return false;
-        bworld.getChunkAtAsync(place.x >> 4, place.z >> 4, (chunk) -> {
+        bworld.getChunkAtAsync(place.x >> 4, place.z >> 4, (Consumer<Chunk>) chunk -> {
                 if (!player.isValid()) return;
                 Location target;
                 if (bworld.getEnvironment() == World.Environment.NETHER) {
@@ -482,7 +485,7 @@ public final class ResourcePlugin extends JavaPlugin {
         if (bworld == null) return;
         int cx = place.x >> 4;
         int cz = place.z >> 4;
-        bworld.getChunkAtAsync(cx, cz, (c) -> {
+        bworld.getChunkAtAsync(cx, cz, (Consumer<Chunk>) chunk -> {
                 Block block = bworld.getHighestBlockAt(place.x, place.z);
                 place.biome = block.getBiome();
                 persistence.knownPlaces.add(place);
