@@ -10,20 +10,15 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.logging.Level;
-import lombok.AllArgsConstructor;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -43,7 +38,7 @@ import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class ResourcePlugin extends JavaPlugin {
-    static final String PERM_ADMIN = "resource.admin";
+    protected static final String PERM_ADMIN = "resource.admin";
     private final Random random = new Random(System.currentTimeMillis());
     // Configuration
     private int crawlerInterval = 20;
@@ -58,61 +53,8 @@ public final class ResourcePlugin extends JavaPlugin {
     private boolean dirty;
     private long lastSave;
     private int attempts;
-    Persistence persistence = new Persistence();
-    Gson gson = new Gson();
-
-    @AllArgsConstructor
-    final class Place {
-        String world;
-        int x;
-        int z;
-        Biome biome;
-
-        Place(final String world, final int x, final int z) {
-            this(world, x, z, (Biome) null);
-        }
-
-        Place(final ConfigurationSection config) {
-            this.world = config.getString("world");
-            this.x = config.getInt("x");
-            this.z = config.getInt("z");
-            if (config.isSet("biome")) {
-                this.biome = Biome.valueOf(config.getString("biome").toUpperCase());
-            }
-        }
-
-        Map<String, Object> serialize() {
-            Map<String, Object> result = new LinkedHashMap<>();
-            result.put("world", world);
-            result.put("x", x);
-            result.put("z", z);
-            if (biome != null) {
-                result.put("biome", biome.name());
-            }
-            return result;
-        }
-
-        Location getLocation() {
-            World bworld = getServer().getWorld(world);
-            if (bworld == null) return null;
-            return new Location(bworld, (double) x + 0.5, 65.0, (double) z + 0.5, 0.0f, 0.0f);
-        }
-    }
-
-    final class Persistence {
-        List<Place> knownPlaces = new ArrayList<>();
-        List<Place> unknownPlaces = new ArrayList<>();
-    }
-
-    final class BiomeGroup {
-        final String name;
-        final Set<Biome> biomes = EnumSet.noneOf(Biome.class);
-
-        BiomeGroup(final String name, final Collection<Biome> biomes) {
-            this.name = name;
-            this.biomes.addAll(biomes);
-        }
-    }
+    protected Persistence persistence = new Persistence();
+    protected Gson gson = new Gson();
 
     @Override
     public void onEnable() {
