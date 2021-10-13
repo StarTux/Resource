@@ -5,6 +5,11 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.DayOfWeek;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -32,17 +37,24 @@ public final class ResourcePlugin extends JavaPlugin {
     protected final List<String> worldNames = new ArrayList<>();
     protected final List<BiomeGroup> biomeGroups = new ArrayList<>();
     protected final EnumMap<Biome, Integer> locatedBiomes = new EnumMap<>(Biome.class);
+    protected SidebarListener sidebarListener = new SidebarListener(this);
     // State
     protected final Map<UUID, Long> cooldowns = new HashMap<>();
     protected final List<Place> places = new ArrayList<>();
     protected final List<Place> randomPlaces = new ArrayList<>();
+    protected LocalDateTime lastReset;
+    protected LocalDateTime nextReset;
+    protected Duration timeUntilReset = Duration.ZERO;
+    protected boolean resetImminent;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        loadAll();
         getCommand("resource").setExecutor(new MineCommand(this));
         new AdminCommand(this).enable();
-        loadAll();
+        sidebarListener.enable();
+        Bukkit.getScheduler().runTaskTimer(this, this::checkReset, 0L, 20L);
     }
 
     @Override
@@ -218,6 +230,43 @@ public final class ResourcePlugin extends JavaPlugin {
             getLogger().info(worldName + ": Total Places: " + worldTotalPlaces);
         }
         cooldowns.clear();
+        //
+        File mineResetFile = new File("MINE_RESET");
+        File lastResetFile = new File("MINE_WORLD");
+        LocalDateTime now = LocalDateTime.now();
+        this.lastReset = lastResetFile.exists()
+            ? LocalDateTime.ofInstant(Instant.ofEpochMilli(lastResetFile.lastModified()), ZoneId.systemDefault())
+            : now;
+        if (mineResetFile.exists()) {
+            resetImminent = true;
+            this.nextReset = now;
+        } else {
+            resetImminent = false;
+            this.nextReset = lastReset;
+            do {
+                nextReset = nextReset
+                    .withHour(14)
+                    .withMinute(0)
+                    .withSecond(0)
+                    .plusDays(1L);
+            } while (!nextReset.isAfter(lastReset) || nextReset.getDayOfWeek() != DayOfWeek.TUESDAY);
+            getLogger().info("Next reset: " + nextReset);
+            checkReset();
+        }
+    }
+
+    protected void checkReset() {
+        if (resetImminent) return;
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isAfter(nextReset)) {
+            resetImminent = true;
+            File mineResetFile = new File("MINE_RESET");
+            if (!mineResetFile.setLastModified(System.currentTimeMillis())) {
+                getLogger().warning("Could not touch " + mineResetFile);
+            }
+        } else {
+            timeUntilReset = Duration.between(now, nextReset);
+        }
     }
 
     protected void setCooldownInSeconds(Player player, int sec) {

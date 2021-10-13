@@ -28,6 +28,8 @@ public final class AdminCommand extends AbstractCommand<ResourcePlugin> {
             sender.sendMessage(Component.text(biomeGroup.name + ": " + biomeGroup.count,
                                               NamedTextColor.YELLOW));
         }
+        sender.sendMessage(Component.text("Last Reset: " + plugin.lastReset, NamedTextColor.AQUA));
+        sender.sendMessage(Component.text("Next Reset: " + plugin.nextReset, NamedTextColor.AQUA));
         return true;
     }
 
