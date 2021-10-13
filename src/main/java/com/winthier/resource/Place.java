@@ -12,7 +12,7 @@ public final class Place {
     public final String world;
     public final int x;
     public final int z;
-    protected Biome biome;
+    public final Biome biome;
 
     public Place(final String world, final int x, final int z) {
         this(world, x, z, (Biome) null);

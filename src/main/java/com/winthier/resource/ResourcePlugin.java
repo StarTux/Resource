@@ -2,15 +2,13 @@ package com.winthier.resource;
 
 import com.cavetale.core.event.player.PluginPlayerEvent.Detail;
 import com.cavetale.core.event.player.PluginPlayerEvent;
-import com.google.gson.Gson;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintStream;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
@@ -24,7 +22,7 @@ import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.ChatColor;
+import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -41,33 +39,24 @@ public final class ResourcePlugin extends JavaPlugin {
     protected static final String PERM_ADMIN = "resource.admin";
     private final Random random = new Random(System.currentTimeMillis());
     // Configuration
-    private int crawlerInterval = 20;
     private int playerCooldown = 5;
-    private int biomeDistance = 256;
     private final List<String> worldNames = new ArrayList<>();
     private final List<BiomeGroup> biomeGroups = new ArrayList<>();
     private final EnumMap<Biome, Integer> locatedBiomes = new EnumMap<>(Biome.class);
     // State
     private final Map<UUID, Long> cooldowns = new HashMap<>();
-    private int ticks;
-    private boolean dirty;
-    private long lastSave;
-    private int attempts;
-    protected Persistence persistence = new Persistence();
-    protected Gson gson = new Gson();
+    private final List<Place> places = new ArrayList<>();
+    private final List<Place> randomPlaces = new ArrayList<>();
 
     @Override
     public void onEnable() {
-        resetLocatedBiomes();
         saveDefaultConfig();
         loadAll();
-        getServer().getScheduler().runTaskTimer(this, () -> onTick(), 1, 1);
     }
 
     @Override
     public void onDisable() {
         cooldowns.clear();
-        if (dirty) saveAll();
     }
 
     @Override
@@ -79,7 +68,7 @@ public final class ResourcePlugin extends JavaPlugin {
                 .asList(NamedTextColor.GREEN, NamedTextColor.AQUA, NamedTextColor.RED, NamedTextColor.LIGHT_PURPLE,
                         NamedTextColor.YELLOW, NamedTextColor.DARK_AQUA, NamedTextColor.GOLD, NamedTextColor.BLUE);
             if (player == null) {
-                warn(sender, "Player expected");
+                sender.sendMessage("[resource:mine] player expected");
                 return true;
             }
             List<Component> biomeList = new ArrayList<>();
@@ -92,11 +81,7 @@ public final class ResourcePlugin extends JavaPlugin {
                                       .build())
                           .build());
             for (BiomeGroup biomeGroup : biomeGroups) {
-                int total = 0;
-                for (Biome biome: biomeGroup.biomes) {
-                    total += locatedBiomes.get(biome);
-                }
-                if (total == 0) continue;
+                if (biomeGroup.count == 0) continue;
                 String lowname = biomeGroup.name.toLowerCase();
                 NamedTextColor color = colors.get(random.nextInt(colors.size()));
                 biomeList.add(Component.text().content("[" + biomeGroup.name + "]").color(color)
@@ -123,115 +108,91 @@ public final class ResourcePlugin extends JavaPlugin {
             return true;
         } else if (cmd.equals("random") && args.length == 1) {
             if (player == null) {
-                warn(sender, "Player expected");
+                sender.sendMessage("[resource:random] Player expected");
                 return true;
             }
-            int cd = getCooldownInSeconds(player);
-            if (cd > 0) {
-                warn(player, "You have to wait %d more seconds.", cd);
+            if (randomPlaces.isEmpty()) {
+                player.sendMessage(Component.text("No biomes found", NamedTextColor.RED));
                 return true;
             }
-            Collections.shuffle(persistence.knownPlaces, random);
-            Place place = null;
-            for (Place p: persistence.knownPlaces) {
-                if (!p.world.contains("nether")
-                    && p.biome != Biome.OCEAN
-                    && p.biome != Biome.DEEP_OCEAN) {
-                    place = p;
-                    break;
+            if (!player.hasPermission("resource.nocooldown")) {
+                int cd = getCooldownInSeconds(player);
+                if (cd > 0) {
+                    player.sendMessage(Component.text("You have to wait " + cd + " more seconds.", NamedTextColor.RED));
+                    return true;
                 }
             }
-            if (place == null) {
-                warn(player, "No biomes found.");
-                return true;
-            }
-            info(player, "Warping to random mining biome.");
+            Place place = randomPlaces.get(random.nextInt(randomPlaces.size()));
+            player.sendMessage(Component.text("Warping to random mining biome...", NamedTextColor.GREEN));
             teleport(player, place, () -> {
+                    setCooldownInSeconds(player, playerCooldown);
                     PluginPlayerEvent.Name.USE_MINE.ultimate(this, player)
                         .detail(Detail.NAME, "random")
                         .call();
+                }, () -> {
+                    player.sendMessage(Component.text("Something went wrong. Please try again", NamedTextColor.RED));
                 });
-            setCooldownInSeconds(player, playerCooldown);
-        } else if (args.length == 1 && cmd.equals("crawl")) {
-            if (!sender.hasPermission(PERM_ADMIN)) return false;
-            crawl();
-            send(sender, "&eCompleted one crawler iteration");
         } else if (args.length == 1 && cmd.equals("info")) {
             if (!sender.hasPermission(PERM_ADMIN)) return false;
-            info(sender, "%d known and %d unknown places",
-                 persistence.knownPlaces.size(), persistence.unknownPlaces.size());
+            sender.sendMessage(Component.text("Places: " + places.size(), NamedTextColor.YELLOW));
+            sender.sendMessage(Component.text("Random Places: " + randomPlaces.size(), NamedTextColor.YELLOW));
             for (BiomeGroup biomeGroup: biomeGroups) {
-                int total = 0;
-                for (Biome biome: biomeGroup.biomes) {
-                    total += locatedBiomes.get(biome);
-                }
-                send(sender, biomeGroup.name + ": " + total);
+                sender.sendMessage(Component.text(biomeGroup.name + ": " + biomeGroup.count,
+                                                  NamedTextColor.YELLOW));
             }
         } else if (args.length == 1 && cmd.equals("reload")) {
             if (!sender.hasPermission(PERM_ADMIN)) return false;
             loadAll();
-            send(sender, "&eConfiguration reloaded");
-        } else if (args.length == 1 && cmd.equals("save")) {
-            if (!sender.hasPermission(PERM_ADMIN)) return false;
-            saveAll();
-            send(sender, "&eConfiguration saved");
-        } else if (args.length == 1 && cmd.equals("setup")) {
-            if (!sender.hasPermission(PERM_ADMIN)) return false;
-            setup();
-            send(sender,
-                 "&eSetup done. %d known and %d unknown places with a distance of %d blocks.",
-                 persistence.knownPlaces.size(), persistence.unknownPlaces.size(), biomeDistance);
+            sender.sendMessage(Component.text("Configuration reloaded", NamedTextColor.YELLOW));
         } else {
             if (player == null) {
-                warn(sender, "Player expected");
+                sender.sendMessage("[resource:mine] player expected");
                 return true;
             }
-            int cd = getCooldownInSeconds(player);
-            if (cd > 0) {
-                warn(player, "You have to wait %d more seconds.", cd);
-                return true;
+            if (!player.hasPermission("resource.nocooldown")) {
+                int cd = getCooldownInSeconds(player);
+                if (cd > 0) {
+                    player.sendMessage(Component.text("You have to wait " + cd + " more seconds.", NamedTextColor.RED));
+                    return true;
+                }
             }
             final String name = String.join(" ", args);
             BiomeGroup biomeGroup = null;
-            for (BiomeGroup bg: biomeGroups) {
+            for (BiomeGroup bg : biomeGroups) {
                 if (bg.name.equalsIgnoreCase(name)) {
                     biomeGroup = bg;
                     break;
                 }
             }
-            if (biomeGroup == null) {
-                warn(player, "Mining biome not found: %s", name);
+            if (biomeGroup == null || biomeGroup.count == 0) {
+                player.sendMessage(Component.text("Mining biome not found: " + name, NamedTextColor.RED));
                 return true;
             }
-            Collections.shuffle(persistence.knownPlaces, random);
-            Place place = null;
-            for (Place p : persistence.knownPlaces) {
-                if (biomeGroup.biomes.contains(p.biome)) {
-                    place = p;
-                    break;
-                }
-            }
-            if (place == null) {
-                warn(sender, "No known location for %s.", biomeGroup.name);
-                return true;
-            }
-            info(player, "Warping to %s mining biome.", biomeGroup.name);
+            Place place = biomeGroup.places.get(random.nextInt(biomeGroup.places.size()));
+            player.sendMessage(Component.text("Warping to " + biomeGroup.name + " mining biome...", NamedTextColor.GREEN));
             teleport(player, place, () -> {
+                    setCooldownInSeconds(player, playerCooldown);
                     PluginPlayerEvent.Name.USE_MINE.ultimate(this, player)
                         .detail(Detail.NAME, name.toLowerCase())
                         .call();
+                }, () -> {
+                    player.sendMessage(Component.text("Something went wrong. Please try again", NamedTextColor.RED));
                 });
-            setCooldownInSeconds(player, playerCooldown);
         }
         return true;
     }
 
-    boolean teleport(Player player, Place place, Runnable callback) {
+    protected void teleport(Player player, Place place, Runnable callback, Runnable failCallback) {
         Location pl = player.getLocation();
         World bworld = getServer().getWorld(place.world);
-        if (bworld == null) return false;
-        bworld.getChunkAtAsync(place.x >> 4, place.z >> 4, (Consumer<Chunk>) chunk -> {
-                if (!player.isValid()) return;
+        if (bworld == null) {
+            if (failCallback != null) {
+                failCallback.run();
+            }
+            return;
+        }
+        bworld.getChunkAtAsync(place.x, place.z, (Consumer<Chunk>) chunk -> {
+                if (!player.isOnline()) return;
                 Location target;
                 if (bworld.getEnvironment() == World.Environment.NETHER) {
                     int score;
@@ -270,48 +231,60 @@ public final class ResourcePlugin extends JavaPlugin {
                         }
                     }
                 } else {
-                    Block block = bworld.getHighestBlockAt(place.x, place.z);
-                    target = block.getLocation().add(0.5, 1.5, 0.5);
+                    int ax = place.x << 4;
+                    int az = place.z << 4;
+                    List<Block> possibleBlocks = new ArrayList<>(16 * 16);
+                    for (int z = 0; z < 16; z += 1) {
+                        for (int x = 0; x < 16; x += 1) {
+                            Block block = bworld.getHighestBlockAt(ax + x, az + z);
+                            if ((block.isSolid() || block.isLiquid())
+                                && block.getRelative(0, 1, 0).isPassable()
+                                && block.getRelative(0, 2, 0).isPassable()) {
+                                possibleBlocks.add(block);
+                            }
+                        }
+                    }
+                    target = !possibleBlocks.isEmpty()
+                        ? possibleBlocks.get(random.nextInt(possibleBlocks.size())).getLocation().add(0.5, 1.0, 0.5)
+                        : null;
                 }
-                if (target == null) return;
+                if (target == null) {
+                    if (failCallback != null) {
+                        failCallback.run();
+                    }
+                    return;
+                }
                 target.setYaw(pl.getYaw());
                 target.setPitch(pl.getPitch());
                 player.teleport(target, TeleportCause.COMMAND);
-                String log = String
-                    .format("[%s] Warp %s to %s %d %d %d",
-                            place.biome.name(), player.getName(), target.getWorld().getName(),
-                            target.getBlockX(), target.getBlockY(), target.getBlockZ());
+                String log = String.format("[%s] Warp %s to %s %d %d %d",
+                                           place.biome.name(), player.getName(), target.getWorld().getName(),
+                                           target.getBlockX(), target.getBlockY(), target.getBlockZ());
                 getLogger().info(log);
                 if (callback != null) callback.run();
             });
-        return true;
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         String arg = args.length == 0 ? "" : args[args.length - 1].toLowerCase();
-        if (args.length == 0 || args.length == 1) {
+        if (args.length == 0) return null;
+        if (args.length == 1) {
             List<String> result = new ArrayList<>();
             for (BiomeGroup biomeGroup: biomeGroups) {
                 if (!biomeGroup.name.toLowerCase().startsWith(arg)) continue;
-                int total = 0;
-                for (Biome biome: biomeGroup.biomes) {
-                    total += locatedBiomes.get(biome);
-                }
-                if (total > 0) result.add(biomeGroup.name);
+                if (biomeGroup.count > 0) result.add(biomeGroup.name);
             }
             return result;
         }
         return null;
     }
 
-    void loadAll() {
+    protected void loadAll() {
         reloadConfig();
         worldNames.clear();
         worldNames.addAll(getConfig().getStringList("Worlds"));
-        crawlerInterval = getConfig().getInt("CrawlerInterval");
         playerCooldown = getConfig().getInt("PlayerCooldown");
-        biomeDistance = getConfig().getInt("BiomeDistance");
         biomeGroups.clear();
         for (Map<?, ?> map: getConfig().getMapList("Biomes")) {
             ConfigurationSection section = getConfig().createSection("tmp", map);
@@ -326,145 +299,84 @@ public final class ResourcePlugin extends JavaPlugin {
             }
             biomeGroups.add(new BiomeGroup(section.getString("Name"), biomes));
         }
-        cooldowns.clear();
-        // Places
-        persistence = new Persistence();
-        File file = new File(getDataFolder(), "places.json");
-        if (file.exists()) {
-            try (FileReader in = new FileReader(file)) {
-                persistence = gson.fromJson(in, Persistence.class);
-            } catch (IOException ioe) {
-                getLogger().log(Level.SEVERE, "Loading persistence", ioe);
-            }
-            resetLocatedBiomes();
-            for (Place place: persistence.knownPlaces) {
-                locatedBiomes.put(place.biome, locatedBiomes.get(place.biome) + 1);
-            }
-        } else {
-            setup();
-        }
-    }
-
-    void saveAll() {
-        dirty = false;
-        lastSave = System.currentTimeMillis();
-        File file = new File(getDataFolder(), "places.json");
-        if (isEnabled()) {
-            String json = gson.toJson(persistence);
-            getServer().getScheduler().runTaskAsynchronously(this, () -> {
-                    try (PrintStream out = new PrintStream(file)) {
-                        out.print(json);
-                    } catch (IOException ioe) {
-                        getLogger().log(Level.SEVERE, "Saving persistence async", ioe);
-                    }
-                });
-        } else {
-            // onDiable(): Sync
-            try (FileWriter out = new FileWriter(file)) {
-                gson.toJson(persistence, out);
-            } catch (IOException ioe) {
-                getLogger().log(Level.SEVERE, "Saving persistence sync", ioe);
-            }
-        }
-    }
-
-    void setup() {
-        persistence = new Persistence();
-        resetLocatedBiomes();
-        for (String worldName: worldNames) {
-            World world = getServer().getWorld(worldName);
+        places.clear();
+        randomPlaces.clear();
+        for (String worldName : worldNames) {
+            World world = Bukkit.getWorld(worldName);
             if (world == null) {
-                getLogger().warning("World not found: " + worldName);
-                continue;
+                throw new IllegalStateException("World not found: " + worldName);
             }
-            double size = world.getWorldBorder().getSize() * 0.5 - 128.0;
-            if (size > 50000.0) size = 50000.0;
-            Location a = world.getWorldBorder().getCenter().add(-size, 0, -size);
-            Location b = world.getWorldBorder().getCenter().add(size, 0, size);
-            int ax = a.getBlockX();
-            int az = a.getBlockZ();
-            int bx = b.getBlockX();
-            int bz = b.getBlockZ();
-            int count = 0;
-            for (int z = az; z <= bz; z += biomeDistance) {
-                for (int x = ax; x <= bx; x += biomeDistance) {
-                    persistence.unknownPlaces.add(new Place(world.getName(), x, z));
-                    count += 1;
+            File biomesFile = new File(world.getWorldFolder(), "biomes.txt");
+            if (!biomesFile.exists()) {
+                throw new IllegalStateException("Biomes file not found: " + biomesFile);
+            }
+            int worldTotalPlaces = 0;
+            try (BufferedReader reader = new BufferedReader(new FileReader(biomesFile))) {
+                while (true) {
+                    String line = reader.readLine();
+                    if (line == null) break;
+                    String[] toks = line.split(",");
+                    if (toks.length < 3) continue;
+                    int chunkX;
+                    int chunkZ;
+                    Biome chunkBiome = null;
+                    int max = 0;
+                    try {
+                        chunkX = Integer.parseInt(toks[0]);
+                        chunkZ = Integer.parseInt(toks[1]);
+                        for (int i = 2; i < toks.length; i += 1) {
+                            String tok = toks[i];
+                            String[] toks2 = tok.split(":");
+                            if (toks2.length > 2) throw new IllegalArgumentException(tok);
+                            Biome biome = Biome.valueOf(toks2[0]);
+                            int count = toks2.length >= 2
+                                ? Integer.parseInt(toks2[1])
+                                : 1; // legacy
+                            if (count > max) {
+                                max = count;
+                                chunkBiome = biome;
+                            }
+                        }
+                        if (chunkBiome == null) {
+                            throw new IllegalStateException("biome=null " + line);
+                        }
+                        Place place = new Place(worldName, chunkX, chunkZ, chunkBiome);
+                        places.add(place);
+                        int placeBiomeGroups = 0;
+                        for (BiomeGroup biomeGroup : biomeGroups) {
+                            if (biomeGroup.biomes.contains(chunkBiome)) {
+                                biomeGroup.places.add(place);
+                                biomeGroup.count += 1;
+                                placeBiomeGroups += 1;
+                            }
+                        }
+                        if (world.getEnvironment() != World.Environment.NETHER && !chunkBiome.name().contains("OCEAN")) {
+                            randomPlaces.add(place);
+                        }
+                        if (placeBiomeGroups > 0) worldTotalPlaces += 1;
+                    } catch (IllegalArgumentException iae) {
+                        getLogger().log(Level.SEVERE, "Invalid line: " + line, iae);
+                        break;
+                    }
                 }
+            } catch (IOException ioe) {
+                throw new UncheckedIOException(ioe);
             }
-            getLogger().info("Setup: " + world.getName() + " has " + count + " places.");
+            getLogger().info(worldName + ": Total Places: " + worldTotalPlaces);
         }
-        Collections.shuffle(persistence.unknownPlaces, random);
-        saveAll();
+        cooldowns.clear();
     }
 
-    void setCooldownInSeconds(Player player, int sec) {
+    protected void setCooldownInSeconds(Player player, int sec) {
         long time = System.currentTimeMillis() + (long) sec * 1000;
         cooldowns.put(player.getUniqueId(), time);
     }
 
-    int getCooldownInSeconds(Player player) {
+    protected int getCooldownInSeconds(Player player) {
         Long time = cooldowns.get(player.getUniqueId());
         if (time == null) return 0;
         long result = time - System.currentTimeMillis();
         if (result < 0) return 0;
         return (int) (result / 1000);
-    }
-
-    void onTick() {
-        if (ticks < crawlerInterval) {
-            ticks += 1;
-        } else {
-            ticks = 0;
-            crawl();
-        }
-    }
-
-    void crawl() {
-        if (persistence.unknownPlaces.isEmpty()) return;
-        Place place = persistence.unknownPlaces.remove(persistence.unknownPlaces.size() - 1);
-        World bworld = getServer().getWorld(place.world);
-        if (bworld == null) return;
-        int cx = place.x >> 4;
-        int cz = place.z >> 4;
-        bworld.getChunkAtAsync(cx, cz, (Consumer<Chunk>) chunk -> {
-                Block block = bworld.getHighestBlockAt(place.x, place.z);
-                place.biome = block.getBiome();
-                persistence.knownPlaces.add(place);
-                locatedBiomes.put(place.biome, locatedBiomes.get(place.biome) + 1);
-                dirty = true;
-                if (lastSave + 60000L < System.currentTimeMillis()) {
-                    saveAll();
-                }
-            });
-    }
-
-    void resetLocatedBiomes() {
-        for (Biome biome: Biome.values()) {
-            locatedBiomes.put(biome, 0);
-        }
-    }
-
-    // --- Messaging Utility
-
-    String format(String msg, Object... args) {
-        if (msg == null) return "";
-        msg = ChatColor.translateAlternateColorCodes('&', msg);
-        if (args.length > 0) {
-            msg = String.format(msg, args);
-        }
-        return msg;
-    }
-
-    void send(CommandSender to, String msg, Object... args) {
-        to.sendMessage(format(msg, args));
-    }
-
-    void info(CommandSender to, String msg, Object... args) {
-        to.sendMessage(format("&r[&3Mine&r] ") + format(msg, args));
-    }
-
-    void warn(CommandSender to, String msg, Object... args) {
-        to.sendMessage(format("&r[&cMine&r] &c") + format(msg, args));
     }
 }

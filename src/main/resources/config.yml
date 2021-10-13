@@ -1,6 +1,4 @@
 Worlds: [ mine, mine_nether ]
-CrawlerInterval: 20
-BiomeDistance: 256
 PlayerCooldown: 10
 Biomes:
 - Name: Plains

@@ -23,6 +23,10 @@ permissions:
     description: Use /resource
     default: op
 
+  resource.nocooldown:
+    description: Skip the cooldown
+    default: op
+
   resource.admin:
     description: Use admin subcommands
     default: op
