@@ -12,10 +12,16 @@ depend: [Core]
 commands:
 
   resource:
-    aliases: [ mine, mining ]
+    aliases: [mine]
     description: User interface
     permission: resource.resource
-    usage: /<command> <biome>
+    usage: /mine [biome]
+
+  resourceadmin:
+    aliases: [mineadmin]
+    description: Admin interface
+    permission: resource.admin
+    usage: /mineadmin
 
 permissions:
 
