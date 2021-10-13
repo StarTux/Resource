@@ -2,6 +2,7 @@ package com.winthier.resource;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -261,8 +262,10 @@ public final class ResourcePlugin extends JavaPlugin {
         if (now.isAfter(nextReset)) {
             resetImminent = true;
             File mineResetFile = new File("MINE_RESET");
-            if (!mineResetFile.setLastModified(System.currentTimeMillis())) {
-                getLogger().warning("Could not touch " + mineResetFile);
+            try {
+                new FileOutputStream(mineResetFile).close();
+            } catch (IOException ioe) {
+                getLogger().warning("Could not create " + mineResetFile);
             }
         } else {
             timeUntilReset = Duration.between(now, nextReset);
