@@ -172,6 +172,10 @@ public final class ResourcePlugin extends JavaPlugin {
             if (world == null) {
                 throw new IllegalStateException("World not found: " + worldName);
             }
+            if (world.getEnvironment() == World.Environment.THE_END) {
+                // Do not scan The End
+                continue;
+            }
             File biomesFile = new File(world.getWorldFolder(), "biomes.txt");
             if (!biomesFile.exists()) {
                 throw new IllegalStateException("Biomes file not found: " + biomesFile);
