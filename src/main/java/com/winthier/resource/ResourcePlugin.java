@@ -228,7 +228,7 @@ public final class ResourcePlugin extends JavaPlugin {
                             }
                         }
                         if (chunkBiome == null) {
-                            throw new IllegalStateException("biome=null " + line);
+                            continue;
                         }
                         Place place = new Place(worldName, chunkX, chunkZ, chunkBiome);
                         places.add(place);
