@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -155,18 +156,23 @@ public final class ResourcePlugin extends JavaPlugin {
         playerCooldown = getConfig().getInt("PlayerCooldown");
         biomeGroups.clear();
         Set<String> warnedAboutBiomes = new HashSet<>();
+        Set<Biome> excludedBiomes = EnumSet.allOf(Biome.class);
         for (Map<?, ?> map: getConfig().getMapList("Biomes")) {
             ConfigurationSection section = getConfig().createSection("tmp", map);
             List<Biome> biomes = new ArrayList<>();
             for (String name: section.getStringList("Biomes")) {
+                Biome biome;
                 try {
-                    biomes.add(Biome.valueOf(name.toUpperCase()));
+                    biome = Biome.valueOf(name.toUpperCase());
                 } catch (IllegalArgumentException iae) {
                     if (!warnedAboutBiomes.contains(name)) {
                         warnedAboutBiomes.add(name);
                         getLogger().warning("config.yml: Unknown biome '" + name + "'. Ignoring");
                     }
+                    continue;
                 }
+                biomes.add(biome);
+                excludedBiomes.remove(biome);
             }
             String name = section.getString("Name");
             if (biomes.isEmpty()) {
@@ -174,6 +180,9 @@ public final class ResourcePlugin extends JavaPlugin {
                 continue;
             }
             biomeGroups.add(new BiomeGroup(name, biomes));
+        }
+        if (!excludedBiomes.isEmpty()) {
+            getLogger().info("Biomes not mentioned in config.yml: " + excludedBiomes);
         }
         places.clear();
         randomPlaces.clear();
