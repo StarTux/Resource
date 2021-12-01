@@ -15,6 +15,8 @@ public final class BiomeGroup {
 
     BiomeGroup(final String name, final Collection<Biome> biomes) {
         this.name = name;
-        this.biomes = EnumSet.copyOf(biomes);
+        this.biomes = !biomes.isEmpty()
+            ? EnumSet.copyOf(biomes)
+            : Set.of();
     }
 }

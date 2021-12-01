@@ -163,7 +163,12 @@ public final class ResourcePlugin extends JavaPlugin {
                     iae.printStackTrace();
                 }
             }
-            biomeGroups.add(new BiomeGroup(section.getString("Name"), biomes));
+            String name = section.getString("Name");
+            if (biomes.isEmpty()) {
+                getLogger().warning("Biome group is empty: " + name);
+                continue;
+            }
+            biomeGroups.add(new BiomeGroup(name, biomes));
         }
         places.clear();
         randomPlaces.clear();
