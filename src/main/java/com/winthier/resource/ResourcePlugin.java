@@ -14,9 +14,11 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -152,6 +154,7 @@ public final class ResourcePlugin extends JavaPlugin {
         worldNames.addAll(getConfig().getStringList("Worlds"));
         playerCooldown = getConfig().getInt("PlayerCooldown");
         biomeGroups.clear();
+        Set<String> warnedAboutBiomes = new HashSet<>();
         for (Map<?, ?> map: getConfig().getMapList("Biomes")) {
             ConfigurationSection section = getConfig().createSection("tmp", map);
             List<Biome> biomes = new ArrayList<>();
@@ -159,8 +162,10 @@ public final class ResourcePlugin extends JavaPlugin {
                 try {
                     biomes.add(Biome.valueOf(name.toUpperCase()));
                 } catch (IllegalArgumentException iae) {
-                    getLogger().warning("Unknown biome '" + name + "'. Ignoring");
-                    iae.printStackTrace();
+                    if (!warnedAboutBiomes.contains(name)) {
+                        warnedAboutBiomes.add(name);
+                        getLogger().warning("config.yml: Unknown biome '" + name + "'. Ignoring");
+                    }
                 }
             }
             String name = section.getString("Name");
@@ -203,7 +208,17 @@ public final class ResourcePlugin extends JavaPlugin {
                             String tok = toks[i];
                             String[] toks2 = tok.split(":");
                             if (toks2.length > 2) throw new IllegalArgumentException(tok);
-                            Biome biome = Biome.valueOf(toks2[0]);
+                            Biome biome;
+                            String biomeName = toks2[0];
+                            try {
+                                biome = Biome.valueOf(biomeName);
+                            } catch (IllegalArgumentException iae) {
+                                if (!warnedAboutBiomes.contains(biomeName)) {
+                                    warnedAboutBiomes.add(biomeName);
+                                    getLogger().warning(biomesFile + ": Biome not found: " + biomeName);
+                                }
+                                continue;
+                            }
                             int count = toks2.length >= 2
                                 ? Integer.parseInt(toks2[1])
                                 : 1; // legacy
