@@ -1,4 +1,4 @@
-Worlds: [ mine, mine_nether ]
+Worlds: [mine, mine_nether, mine_the_end]
 PlayerCooldown: 10
 Biomes:
 - Name: Plains
@@ -9,53 +9,70 @@ Biomes:
   Biomes:
   - FOREST
   - BIRCH_FOREST
-  - BIRCH_FOREST_HILLS
   - DARK_FOREST
   - FLOWER_FOREST
-  - TALL_BIRCH_FOREST
-  - DARK_FOREST_HILLS
-  - WOODED_HILLS
-  - WOODED_MOUNTAINS
-  - WOODED_BADLANDS_PLATEAU
-  - MODIFIED_WOODED_BADLANDS_PLATEAU
+  - OLD_GROWTH_BIRCH_FOREST
+  - WINDSWEPT_FOREST
+- Name: Mountains
+  Biomes:
+  - SNOWY_SLOPES
+  - MEADOW
+  - GROVE
+  - JAGGED_PEAKS
+  - FROZEN_PEAKS
+  - STONY_PEAKS
+- Name: Dark Forest
+  Biomes:
+  - DARK_FOREST
+- Name: Flower Forest
+  Biomes:
+  - FLOWER_FOREST
 - Name: Swamp
   Biomes:
   - SWAMP
-  - SWAMP_HILLS
 - Name: Taiga
   Biomes:
   - TAIGA
-  - TAIGA_HILLS
   - SNOWY_TAIGA
-  - SNOWY_TAIGA_HILLS
-  - GIANT_TREE_TAIGA
-  - GIANT_TREE_TAIGA_HILLS
-  - TAIGA_MOUNTAINS
-  - SNOWY_TAIGA_MOUNTAINS
-  - GIANT_SPRUCE_TAIGA
-  - GIANT_SPRUCE_TAIGA_HILLS
+  - OLD_GROWTH_PINE_TAIGA
+  - OLD_GROWTH_SPRUCE_TAIGA
 - Name: Desert
   Biomes:
   - DESERT
-  - DESERT_HILLS
-  - DESERT_LAKES
+- Name: Jungle
+  Biomes:
+  - JUNGLE
+  - SPARSE_JUNGLE
+- Name: Bamboo
+  Biomes:
+  - BAMBOO_JUNGLE
 - Name: Mesa
   Biomes:
   - BADLANDS
-  - WOODED_BADLANDS_PLATEAU
-  - BADLANDS_PLATEAU
   - ERODED_BADLANDS
-  - MODIFIED_WOODED_BADLANDS_PLATEAU
-  - MODIFIED_BADLANDS_PLATEAU
+  - WOODED_BADLANDS
+- Name: Savanna
+  Biomes:
+  - SAVANNA
+  - SAVANNA_PLATEAU
+  - WINDSWEPT_SAVANNA
 - Name: Cold
   Biomes:
   - ICE_SPIKES
-  - SNOWY_TUNDRA
-  - SNOWY_MOUNTAINS
   - SNOWY_BEACH
   - SNOWY_TAIGA
-  - SNOWY_TAIGA_HILLS
-  - SNOWY_TAIGA_MOUNTAINS
+  - FROZEN_OCEAN
+  - COLD_OCEAN
+  - FROZEN_RIVER
+  - SNOWY_PLAINS
+  - SNOWY_SLOPES
+  - FROZEN_PEAKS
+- Name: Frozen
+  Biomes:
+  - FROZEN_OCEAN
+  - FROZEN_RIVER
+  - ICE_SPIKES
+  - DEEP_FROZEN_OCEAN
 - Name: Ocean
   Biomes:
   - OCEAN
@@ -64,11 +81,18 @@ Biomes:
   - WARM_OCEAN
   - LUKEWARM_OCEAN
   - COLD_OCEAN
-  - DEEP_WARM_OCEAN
   - DEEP_LUKEWARM_OCEAN
   - DEEP_COLD_OCEAN
   - DEEP_FROZEN_OCEAN
   - BEACH
+  - STONY_SHORE
+- Name: River
+  Biomes:
+  - RIVER
+  - FROZEN_RIVER
+- Name: Mooshroom
+  Biomes:
+  - MUSHROOM_FIELDS
 - Name: Nether
   Biomes:
   - NETHER_WASTES
@@ -76,3 +100,7 @@ Biomes:
   - CRIMSON_FOREST
   - WARPED_FOREST
   - BASALT_DELTAS
+- Name: Windy
+  Biomes:
+  - WINDSWEPT_HILLS
+  - WINDSWEPT_GRAVELLY_HILLS
