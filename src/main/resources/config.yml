@@ -13,6 +13,10 @@ Biomes:
   - FLOWER_FOREST
   - OLD_GROWTH_BIRCH_FOREST
   - WINDSWEPT_FOREST
+- Name: Windswept
+  Biomes:
+  - WINDSWEPT_HILLS
+  - WINDSWEPT_GRAVELLY_HILLS
 - Name: Mountains
   Biomes:
   - SNOWY_SLOPES
@@ -100,7 +104,3 @@ Biomes:
   - CRIMSON_FOREST
   - WARPED_FOREST
   - BASALT_DELTAS
-- Name: Windy
-  Biomes:
-  - WINDSWEPT_HILLS
-  - WINDSWEPT_GRAVELLY_HILLS
