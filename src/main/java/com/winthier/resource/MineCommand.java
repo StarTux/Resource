@@ -42,6 +42,10 @@ public final class MineCommand implements TabExecutor {
             random(player);
             return true;
         }
+        if (args.length == 1 && args[0].equalsIgnoreCase("end")) {
+            player.sendMessage(Component.text("You need to find an End portal in a Mining Overworld Stronghold to get to the Mining End!", NamedTextColor.GOLD));
+            return true;
+        }
         biome(player, String.join(" ", args));
         return true;
     }
@@ -64,6 +68,12 @@ public final class MineCommand implements TabExecutor {
                                           Component.text("Warp to " + biomeGroup.name + " Biome", NamedTextColor.GRAY),
                                       }))));
         }
+        biomeList.add((Component.text().content("[End]").color(NamedTextColor.AQUA))
+                      .clickEvent(ClickEvent.runCommand("/mine end"))
+                      .hoverEvent(HoverEvent.showText(Component.join(JoinConfiguration.separator(Component.newline()), new Component[] {
+                                      Component.text("Directions to the", NamedTextColor.GREEN),
+                                      Component.text("Mining End", NamedTextColor.AQUA),
+                                  }))));
         player.sendMessage(Component.join(JoinConfiguration.noSeparators(), new Component[] {
                     Component.empty(),
                     Component.newline(),
