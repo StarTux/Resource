@@ -35,6 +35,19 @@ import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class ResourcePlugin extends JavaPlugin {
+    // Put in this array all known biomes belonging to dimensions
+    // which are not supported by this plugin.
+    protected static final EnumSet<Biome> IGNORED_BIOMES = EnumSet.of(Biome.CUSTOM, new Biome[] {
+            Biome.CUSTOM,
+            Biome.DRIPSTONE_CAVES,
+            Biome.END_BARRENS,
+            Biome.END_HIGHLANDS,
+            Biome.END_MIDLANDS,
+            Biome.LUSH_CAVES,
+            Biome.SMALL_END_ISLANDS,
+            Biome.THE_END,
+            Biome.THE_VOID,
+        });
     protected final Random random = new Random(System.currentTimeMillis());
     // Configuration
     protected int playerCooldown = 5;
@@ -156,7 +169,7 @@ public final class ResourcePlugin extends JavaPlugin {
         playerCooldown = getConfig().getInt("PlayerCooldown");
         biomeGroups.clear();
         Set<String> warnedAboutBiomes = new HashSet<>();
-        Set<Biome> excludedBiomes = EnumSet.allOf(Biome.class);
+        Set<Biome> excludedBiomes = EnumSet.complementOf(IGNORED_BIOMES);
         for (Map<?, ?> map: getConfig().getMapList("Biomes")) {
             ConfigurationSection section = getConfig().createSection("tmp", map);
             List<Biome> biomes = new ArrayList<>();
@@ -182,7 +195,7 @@ public final class ResourcePlugin extends JavaPlugin {
             biomeGroups.add(new BiomeGroup(name, biomes));
         }
         if (!excludedBiomes.isEmpty()) {
-            getLogger().info("Biomes not mentioned in config.yml: " + excludedBiomes);
+            getLogger().warning("Biomes not mentioned in config.yml: " + excludedBiomes);
         }
         places.clear();
         randomPlaces.clear();
