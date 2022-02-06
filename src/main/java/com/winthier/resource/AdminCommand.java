@@ -18,9 +18,12 @@ public final class AdminCommand extends AbstractCommand<ResourcePlugin> {
         rootNode.addChild("reload").denyTabCompletion()
             .description("Reload configs and biomes")
             .senderCaller(this::reload);
+        rootNode.addChild("save").denyTabCompletion()
+            .description("Save config to disk")
+            .senderCaller(this::save);
     }
 
-    boolean info(CommandSender sender, String[] args) {
+    protected boolean info(CommandSender sender, String[] args) {
         if (args.length != 0) return false;
         sender.sendMessage(Component.text("Places: " + plugin.places.size(), NamedTextColor.YELLOW));
         sender.sendMessage(Component.text("Random Places: " + plugin.randomPlaces.size(), NamedTextColor.YELLOW));
@@ -33,9 +36,17 @@ public final class AdminCommand extends AbstractCommand<ResourcePlugin> {
         return true;
     }
 
-    boolean reload(CommandSender sender, String[] args) {
+    protected boolean reload(CommandSender sender, String[] args) {
+        if (args.length != 0) return false;
         plugin.loadAll();
         sender.sendMessage(Component.text("Configuration reloaded", NamedTextColor.YELLOW));
+        return true;
+    }
+
+    protected boolean save(CommandSender sender, String[] args) {
+        if (args.length != 0) return false;
+        plugin.saveDefaultConfig();
+        sender.sendMessage(Component.text("Default config saved to disk", NamedTextColor.YELLOW));
         return true;
     }
 }

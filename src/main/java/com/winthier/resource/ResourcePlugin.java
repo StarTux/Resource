@@ -1,5 +1,7 @@
 package com.winthier.resource;
 
+import com.cavetale.core.command.RemotePlayer;
+import com.winthier.connect.Connect;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -29,9 +31,9 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
-import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class ResourcePlugin extends JavaPlugin {
@@ -51,10 +53,12 @@ public final class ResourcePlugin extends JavaPlugin {
     protected final Random random = new Random(System.currentTimeMillis());
     // Configuration
     protected int playerCooldown = 5;
-    protected final List<String> worldNames = new ArrayList<>();
+    protected final List<String> worldNames = List.of("mine", "mine_nether", "mine_the_end");
     protected final List<BiomeGroup> biomeGroups = new ArrayList<>();
     protected final EnumMap<Biome, Integer> locatedBiomes = new EnumMap<>(Biome.class);
     protected SidebarListener sidebarListener = new SidebarListener(this);
+    protected boolean isMineServer;
+    protected String mineServerName;
     // State
     protected final Map<UUID, Long> cooldowns = new HashMap<>();
     protected final List<Place> places = new ArrayList<>();
@@ -63,15 +67,29 @@ public final class ResourcePlugin extends JavaPlugin {
     protected LocalDateTime nextReset;
     protected Duration timeUntilReset = Duration.ZERO;
     protected boolean resetImminent;
+    protected Set<String> warnedAboutBiomes = new HashSet<>();
 
     @Override
     public void onEnable() {
-        saveDefaultConfig();
-        loadAll();
+        switch (Connect.getInstance().getServerName()) {
+        case "cavetale": case "beta":
+            isMineServer = true;
+            break;
+        case "alpha":
+            isMineServer = false;
+            mineServerName = "beta";
+            break;
+        default:
+            isMineServer = false;
+            mineServerName = "cavetale";
+        }
         getCommand("resource").setExecutor(new MineCommand(this));
         new AdminCommand(this).enable();
-        sidebarListener.enable();
-        Bukkit.getScheduler().runTaskTimer(this, this::checkReset, 0L, 20L);
+        if (isMineServer) {
+            sidebarListener.enable();
+            Bukkit.getScheduler().runTaskTimer(this, this::checkReset, 0L, 20L);
+        }
+        loadAll();
     }
 
     @Override
@@ -79,17 +97,13 @@ public final class ResourcePlugin extends JavaPlugin {
         cooldowns.clear();
     }
 
-    protected void teleport(Player player, Place place, Runnable callback, Runnable failCallback) {
-        Location pl = player.getLocation();
+    public void findLocation(Place place, Consumer<Location> callback) {
         World bworld = getServer().getWorld(place.world);
         if (bworld == null) {
-            if (failCallback != null) {
-                failCallback.run();
-            }
+            callback.accept(null);
             return;
         }
         bworld.getChunkAtAsync(place.x, place.z, (Consumer<Chunk>) chunk -> {
-                if (!player.isOnline()) return;
                 Location target;
                 if (bworld.getEnvironment() == World.Environment.NETHER) {
                     int score;
@@ -145,30 +159,20 @@ public final class ResourcePlugin extends JavaPlugin {
                         ? possibleBlocks.get(random.nextInt(possibleBlocks.size())).getLocation().add(0.5, 1.0, 0.5)
                         : null;
                 }
-                if (target == null) {
-                    if (failCallback != null) {
-                        failCallback.run();
-                    }
-                    return;
-                }
-                target.setYaw(pl.getYaw());
-                target.setPitch(pl.getPitch());
-                player.teleport(target, TeleportCause.COMMAND);
-                String log = String.format("[%s] Warp %s to %s %d %d %d",
-                                           place.biome.name(), player.getName(), target.getWorld().getName(),
-                                           target.getBlockX(), target.getBlockY(), target.getBlockZ());
-                getLogger().info(log);
-                if (callback != null) callback.run();
+                callback.accept(target);
+                return;
             });
     }
 
     protected void loadAll() {
+        parseConfig();
+        loadBiomes();
+    }
+
+    protected void parseConfig() {
         reloadConfig();
-        worldNames.clear();
-        worldNames.addAll(getConfig().getStringList("Worlds"));
         playerCooldown = getConfig().getInt("PlayerCooldown");
         biomeGroups.clear();
-        Set<String> warnedAboutBiomes = new HashSet<>();
         Set<Biome> excludedBiomes = EnumSet.complementOf(IGNORED_BIOMES);
         for (Map<?, ?> map: getConfig().getMapList("Biomes")) {
             ConfigurationSection section = getConfig().createSection("tmp", map);
@@ -196,6 +200,15 @@ public final class ResourcePlugin extends JavaPlugin {
         }
         if (!excludedBiomes.isEmpty()) {
             getLogger().warning("Biomes not mentioned in config.yml: " + excludedBiomes);
+        }
+    }
+
+    protected void loadBiomes() {
+        if (!isMineServer) {
+            for (BiomeGroup biomeGroup : biomeGroups) {
+                biomeGroup.count = 1;
+            }
+            return;
         }
         places.clear();
         randomPlaces.clear();
@@ -277,7 +290,6 @@ public final class ResourcePlugin extends JavaPlugin {
             getLogger().info(worldName + ": Total Places: " + worldTotalPlaces);
         }
         cooldowns.clear();
-        //
         File mineResetFile = new File("MINE_RESET");
         File lastResetFile = new File("MINE_WORLD");
         LocalDateTime now = LocalDateTime.now();
@@ -318,13 +330,29 @@ public final class ResourcePlugin extends JavaPlugin {
         }
     }
 
-    protected void setCooldownInSeconds(Player player, int sec) {
+    protected void setCooldownInSeconds(CommandSender sender, int sec) {
+        UUID uuid;
+        if (sender instanceof Player player) {
+            uuid = player.getUniqueId();
+        } else if (sender instanceof RemotePlayer player) {
+            uuid = player.getUniqueId();
+        } else {
+            return;
+        }
         long time = System.currentTimeMillis() + (long) sec * 1000;
-        cooldowns.put(player.getUniqueId(), time);
+        cooldowns.put(uuid, time);
     }
 
-    protected int getCooldownInSeconds(Player player) {
-        Long time = cooldowns.get(player.getUniqueId());
+    protected int getCooldownInSeconds(CommandSender sender) {
+        UUID uuid;
+        if (sender instanceof Player player) {
+            uuid = player.getUniqueId();
+        } else if (sender instanceof RemotePlayer player) {
+            uuid = player.getUniqueId();
+        } else {
+            return 0;
+        }
+        Long time = cooldowns.get(uuid);
         if (time == null) return 0;
         long result = time - System.currentTimeMillis();
         if (result < 0) return 0;
