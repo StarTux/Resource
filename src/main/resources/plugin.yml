@@ -1,7 +1,7 @@
 main: com.winthier.resource.ResourcePlugin
 name: Resource
 version: 0.1
-api-version: 1.17
+api-version: 1.18
 
 description: Warp to resource biomes
 author: StarTux
@@ -31,7 +31,7 @@ permissions:
 
   resource.nocooldown:
     description: Skip the cooldown
-    default: op
+    default: false
 
   resource.admin:
     description: Use admin subcommands

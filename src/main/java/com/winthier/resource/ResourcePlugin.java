@@ -53,11 +53,12 @@ public final class ResourcePlugin extends JavaPlugin {
     protected final Random random = new Random(System.currentTimeMillis());
     // Configuration
     protected int playerCooldown = 5;
-    protected final List<String> worldNames = List.of("mine", "mine_nether", "mine_the_end");
+    protected List<String> worldNames = List.of();
     protected final List<BiomeGroup> biomeGroups = new ArrayList<>();
     protected final EnumMap<Biome, Integer> locatedBiomes = new EnumMap<>(Biome.class);
     protected SidebarListener sidebarListener = new SidebarListener(this);
     protected boolean isMineServer;
+    protected boolean doMineReset;
     protected String mineServerName;
     // State
     protected final Map<UUID, Long> cooldowns = new HashMap<>();
@@ -71,13 +72,20 @@ public final class ResourcePlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        switch (Connect.getInstance().getServerName()) {
+        String serverName = Connect.getInstance().getServerName();
+        switch (serverName) {
         case "cavetale": case "beta":
             isMineServer = true;
+            doMineReset = true;
             break;
         case "alpha":
             isMineServer = false;
+            doMineReset = false;
             mineServerName = "beta";
+            break;
+        case "bingo":
+            isMineServer = true;
+            doMineReset = false;
             break;
         default:
             isMineServer = false;
@@ -87,9 +95,15 @@ public final class ResourcePlugin extends JavaPlugin {
         new AdminCommand(this).enable();
         if (isMineServer) {
             sidebarListener.enable();
+        }
+        if (isMineServer && doMineReset) {
             Bukkit.getScheduler().runTaskTimer(this, this::checkReset, 0L, 20L);
         }
         loadAll();
+        getLogger().info("server=" + serverName
+                         + " isMineServer=" + isMineServer
+                         + " doMineReset=" + doMineReset
+                         + " worlds=" + worldNames);
     }
 
     @Override
@@ -171,6 +185,7 @@ public final class ResourcePlugin extends JavaPlugin {
 
     protected void parseConfig() {
         reloadConfig();
+        worldNames = getConfig().getStringList("Worlds");
         playerCooldown = getConfig().getInt("PlayerCooldown");
         biomeGroups.clear();
         Set<Biome> excludedBiomes = EnumSet.complementOf(IGNORED_BIOMES);
@@ -290,27 +305,29 @@ public final class ResourcePlugin extends JavaPlugin {
             getLogger().info(worldName + ": Total Places: " + worldTotalPlaces);
         }
         cooldowns.clear();
-        File mineResetFile = new File("MINE_RESET");
-        File lastResetFile = new File("MINE_WORLD");
-        LocalDateTime now = LocalDateTime.now();
-        this.lastReset = lastResetFile.exists()
-            ? LocalDateTime.ofInstant(Instant.ofEpochMilli(lastResetFile.lastModified()), ZoneId.systemDefault())
-            : now;
-        if (mineResetFile.exists()) {
-            resetImminent = true;
-            this.nextReset = now;
-        } else {
-            resetImminent = false;
-            this.nextReset = lastReset;
-            do {
-                nextReset = nextReset
-                    .withHour(14)
-                    .withMinute(0)
-                    .withSecond(0)
-                    .plusDays(1L);
-            } while (!nextReset.isAfter(lastReset) || nextReset.getDayOfWeek() != DayOfWeek.TUESDAY);
-            getLogger().info("Next reset: " + nextReset);
-            checkReset();
+        if (isMineServer && doMineReset) {
+            File mineResetFile = new File("MINE_RESET");
+            File lastResetFile = new File("MINE_WORLD");
+            LocalDateTime now = LocalDateTime.now();
+            this.lastReset = lastResetFile.exists()
+                ? LocalDateTime.ofInstant(Instant.ofEpochMilli(lastResetFile.lastModified()), ZoneId.systemDefault())
+                : now;
+            if (mineResetFile.exists()) {
+                resetImminent = true;
+                this.nextReset = now;
+            } else {
+                resetImminent = false;
+                this.nextReset = lastReset;
+                do {
+                    nextReset = nextReset
+                        .withHour(14)
+                        .withMinute(0)
+                        .withSecond(0)
+                        .plusDays(1L);
+                } while (!nextReset.isAfter(lastReset) || nextReset.getDayOfWeek() != DayOfWeek.TUESDAY);
+                getLogger().info("Next reset: " + nextReset);
+                checkReset();
+            }
         }
     }
 
