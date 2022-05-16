@@ -28,9 +28,11 @@ import java.util.logging.Level;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.Waterlogged;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
@@ -112,70 +114,94 @@ public final class ResourcePlugin extends JavaPlugin {
     }
 
     public void findLocation(Place place, Consumer<Location> callback) {
-        World bworld = getServer().getWorld(place.world);
-        if (bworld == null) {
+        World world = getServer().getWorld(place.world);
+        if (world == null) {
             callback.accept(null);
             return;
         }
-        bworld.getChunkAtAsync(place.x, place.z, (Consumer<Chunk>) chunk -> {
-                Location target;
-                if (bworld.getEnvironment() == World.Environment.NETHER) {
-                    int score;
-                    target = null;
-                    BLOCKS:
-                    for (int z = 0; z < 16; z += 1) {
-                        for (int x = 0; x < 16; x += 1) {
-                            score = 0;
-                            for (int y = 112; y > 16; y -= 1) {
-                                Block block = chunk.getBlock(x, y, z);
-                                switch (score) {
-                                case 0: case 1: {
-                                    if (block.isEmpty()) {
-                                        score += 1;
-                                    } else {
-                                        score = 0;
-                                    }
-                                    break;
-                                }
-                                case 2: default: {
-                                    if (block.isEmpty()) {
-                                        continue;
-                                    } else if (block.getType().isSolid()) {
-                                        score += 1;
-                                    } else {
-                                        score = 0;
-                                    }
-                                    break;
-                                }
-                                }
-                                if (score == 3) {
-                                    target = block.getLocation().add(0.5, 1.0, 0.5);
-                                    break BLOCKS;
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    int ax = place.x << 4;
-                    int az = place.z << 4;
-                    List<Block> possibleBlocks = new ArrayList<>(16 * 16);
-                    for (int z = 0; z < 16; z += 1) {
-                        for (int x = 0; x < 16; x += 1) {
-                            Block block = bworld.getHighestBlockAt(ax + x, az + z);
-                            if ((block.isSolid() || block.isLiquid())
-                                && block.getRelative(0, 1, 0).isPassable()
-                                && block.getRelative(0, 2, 0).isPassable()) {
-                                possibleBlocks.add(block);
-                            }
-                        }
-                    }
-                    target = !possibleBlocks.isEmpty()
-                        ? possibleBlocks.get(random.nextInt(possibleBlocks.size())).getLocation().add(0.5, 1.0, 0.5)
-                        : null;
-                }
+        world.getChunkAtAsync(place.x, place.z, (Consumer<Chunk>) chunk -> {
+                Location target = world.getEnvironment() == World.Environment.NETHER
+                    ? findLocationNether(place, chunk)
+                    : findLocationOverworld(place, chunk);
                 callback.accept(target);
                 return;
             });
+    }
+
+    private Location findLocationOverworld(Place place, Chunk chunk) {
+        int ax = place.x << 4;
+        int az = place.z << 4;
+        List<Block> possibleBlocks = new ArrayList<>(256);
+        for (int z = 0; z < 16; z += 1) {
+            for (int x = 0; x < 16; x += 1) {
+                Block block = chunk.getWorld().getHighestBlockAt(ax + x, az + z);
+                if (place.biome.name().contains("OCEAN")) {
+                    if (block.getType() != Material.WATER
+                        && !((block.getBlockData() instanceof Waterlogged w) && w.isWaterlogged())) {
+                        continue;
+                    }
+                } else {
+                    if (!block.isSolid()) continue;
+                }
+                if (isForbiddenBlock(block.getType())) continue;
+                if (!block.getRelative(0, 1, 0).getCollisionShape().getBoundingBoxes().isEmpty()) continue;
+                if (!block.getRelative(0, 2, 0).getCollisionShape().getBoundingBoxes().isEmpty()) continue;
+                possibleBlocks.add(block);
+            }
+        }
+        return possibleBlocks.isEmpty() ? null
+            : possibleBlocks.get(random.nextInt(possibleBlocks.size())).getLocation().add(0.5, 1.0, 0.5);
+    }
+
+    private Location findLocationNether(Place place, Chunk chunk) {
+        int score;
+        List<Block> possibleBlocks = new ArrayList<>(256);
+        for (int z = 0; z < 16; z += 1) {
+            for (int x = 0; x < 16; x += 1) {
+                score = 0;
+                for (int y = 112; y > 16; y -= 1) {
+                    Block block = chunk.getBlock(x, y, z);
+                    switch (score) {
+                    case 0: case 1: {
+                        if (block.getCollisionShape().getBoundingBoxes().isEmpty()) {
+                            score += 1;
+                        } else {
+                            score = 0;
+                        }
+                        break;
+                    }
+                    case 2: default: {
+                        if (block.getCollisionShape().getBoundingBoxes().isEmpty()) {
+                            continue;
+                        } else if (block.getType().isSolid()) {
+                            if (isForbiddenBlock(block.getType())) {
+                                score = 0;
+                            } else {
+                                score += 1;
+                            }
+                        } else {
+                            score = 0;
+                        }
+                        break;
+                    }
+                    }
+                    if (score == 3) {
+                        possibleBlocks.add(block);
+                    }
+                }
+            }
+        }
+        return possibleBlocks.isEmpty() ? null
+            : possibleBlocks.get(random.nextInt(possibleBlocks.size())).getLocation().add(0.5, 1.0, 0.5);
+    }
+
+    /**
+     * Despite being a full block (or water in the ocean), determine
+     * if a block is forbidden to stand on.
+     */
+    private boolean isForbiddenBlock(Material mat) {
+        return mat == Material.MAGMA_BLOCK
+            || mat == Material.POWDER_SNOW;
     }
 
     protected void loadAll() {
