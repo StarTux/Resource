@@ -161,6 +161,10 @@ public final class ResourcePlugin extends JavaPlugin {
                 score = 0;
                 for (int y = 112; y > 16; y -= 1) {
                     Block block = chunk.getBlock(x, y, z);
+                    if (block.isLiquid()) {
+                        score = 0;
+                        continue;
+                    }
                     switch (score) {
                     case 0: case 1: {
                         if (block.getCollisionShape().getBoundingBoxes().isEmpty()) {
