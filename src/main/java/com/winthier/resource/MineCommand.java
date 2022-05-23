@@ -14,6 +14,7 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -161,9 +162,9 @@ public final class MineCommand implements TabExecutor {
                                            place.biome.name(), player.getName(), location.getWorld().getName(),
                                            location.getBlockX(), location.getBlockY(), location.getBlockZ());
                 plugin.getLogger().info(log);
-                PluginPlayerEvent.Name.USE_MINE.ultimate(plugin, player)
+                PluginPlayerEvent.Name.USE_MINE.make(plugin, player)
                     .detail(Detail.NAME, biomeName.toLowerCase())
-                    .call();
+                    .callEvent();
             });
     }
 
@@ -174,22 +175,20 @@ public final class MineCommand implements TabExecutor {
                     return;
                 }
                 boolean ticket = location.getChunk().addPluginChunkTicket(plugin);
-                remote.bring(plugin, evt -> {
+                remote.bring(plugin, location, player -> {
                         if (ticket) location.getChunk().removePluginChunkTicket(plugin);
-                        if (evt == null) {
+                        if (player == null) {
                             remote.sendMessage(Component.text("You timed out!", NamedTextColor.RED));
                             return;
                         }
-                        evt.setSpawnLocation(location);
-                        Player player = evt.getPlayer();
                         plugin.setCooldownInSeconds(player, plugin.playerCooldown);
                         String log = String.format("[%s] Set Spawn Location %s to %s %d %d %d",
                                                    place.biome.name(), player.getName(), location.getWorld().getName(),
                                                    location.getBlockX(), location.getBlockY(), location.getBlockZ());
                         plugin.getLogger().info(log);
-                        PluginPlayerEvent.Name.USE_MINE.ultimate(plugin, player)
+                        PluginPlayerEvent.Name.USE_MINE.make(plugin, player)
                             .detail(Detail.NAME, biomeName.toLowerCase())
-                            .call();
+                            .callEvent();
                     });
             });
     }
