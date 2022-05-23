@@ -144,8 +144,8 @@ public final class ResourcePlugin extends JavaPlugin {
                     if (!block.isSolid()) continue;
                 }
                 if (isForbiddenBlock(block.getType())) continue;
-                if (!block.getRelative(0, 1, 0).getCollisionShape().getBoundingBoxes().isEmpty()) continue;
-                if (!block.getRelative(0, 2, 0).getCollisionShape().getBoundingBoxes().isEmpty()) continue;
+                if (!canStandIn(block.getRelative(0, 1, 0))) continue;
+                if (!canStandIn(block.getRelative(0, 2, 0))) continue;
                 possibleBlocks.add(block);
             }
         }
@@ -167,7 +167,7 @@ public final class ResourcePlugin extends JavaPlugin {
                     }
                     switch (score) {
                     case 0: case 1: {
-                        if (block.getCollisionShape().getBoundingBoxes().isEmpty()) {
+                        if (canStandIn(block)) {
                             score += 1;
                         } else {
                             score = 0;
@@ -175,14 +175,10 @@ public final class ResourcePlugin extends JavaPlugin {
                         break;
                     }
                     case 2: default: {
-                        if (block.getCollisionShape().getBoundingBoxes().isEmpty()) {
+                        if (canStandIn(block)) {
                             continue;
                         } else if (block.getType().isSolid()) {
-                            if (isForbiddenBlock(block.getType())) {
-                                score = 0;
-                            } else {
-                                score += 1;
-                            }
+                            score += 1;
                         } else {
                             score = 0;
                         }
@@ -203,9 +199,15 @@ public final class ResourcePlugin extends JavaPlugin {
      * Despite being a full block (or water in the ocean), determine
      * if a block is forbidden to stand on.
      */
-    private boolean isForbiddenBlock(Material mat) {
+    private static boolean isForbiddenBlock(Material mat) {
         return mat == Material.MAGMA_BLOCK
-            || mat == Material.POWDER_SNOW;
+            || mat == Material.POWDER_SNOW
+            || mat == Material.LAVA;
+    }
+
+    private static boolean canStandIn(Block block) {
+        return !isForbiddenBlock(block.getType())
+            && block.getCollisionShape().getBoundingBoxes().isEmpty();
     }
 
     protected void loadAll() {
