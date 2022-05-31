@@ -25,11 +25,10 @@ public final class SidebarListener implements Listener {
         if (!plugin.worldNames.contains(event.getPlayer().getWorld().getName())) return;
         List<Component> lines = new ArrayList<>();
         lines.add(text("/mine", YELLOW)
-                  .append(text(" world", AQUA)));
+                  .append(text(" world reset", AQUA)));
         if (plugin.doMineReset) {
             if (plugin.resetImminent) {
-                lines.add(text("Reset ", AQUA)
-                          .append(text("Imminent", RED)));
+                lines.add(text("Imminent", RED));
             } else {
                 long days = plugin.timeUntilReset.toDays();
                 String timeString = days > 0
@@ -40,8 +39,7 @@ public final class SidebarListener implements Listener {
                        + " " + (plugin.timeUntilReset.toMinutes() % 60) + "m"
                        + " " + (plugin.timeUntilReset.toSeconds() % 60) + "s");
 
-                lines.add(text("Reset in ", AQUA)
-                          .append(text(timeString, WHITE)));
+                lines.add(text("in ", AQUA).append(text(timeString, WHITE)));
             }
         }
         event.add(plugin, Priority.LOW, lines);
