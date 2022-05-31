@@ -1,122 +1,123 @@
 package com.winthier.resource;
 
+import com.cavetale.core.command.AbstractCommand;
+import com.cavetale.core.command.CommandArgCompleter;
+import com.cavetale.core.command.CommandWarn;
 import com.cavetale.core.command.RemotePlayer;
+import com.cavetale.core.connect.Connect;
 import com.cavetale.core.event.player.PluginPlayerEvent.Detail;
 import com.cavetale.core.event.player.PluginPlayerEvent;
-import com.winthier.connect.message.RemotePlayerCommandMessage;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentLike;
-import net.kyori.adventure.text.JoinConfiguration;
-import net.kyori.adventure.text.event.ClickEvent;
-import net.kyori.adventure.text.event.HoverEvent;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Location;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabExecutor;
-import org.bukkit.entity.Player;
-import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
+import net.kyori.adventure.text.format.TextColor;
+import static net.kyori.adventure.text.Component.empty;
+import static net.kyori.adventure.text.Component.join;
+import static net.kyori.adventure.text.Component.newline;
+import static net.kyori.adventure.text.Component.space;
+import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
+import static net.kyori.adventure.text.JoinConfiguration.separator;
+import static net.kyori.adventure.text.event.ClickEvent.runCommand;
+import static net.kyori.adventure.text.event.HoverEvent.showText;
+import static net.kyori.adventure.text.format.NamedTextColor.*;
+import static net.kyori.adventure.text.format.TextDecoration.*;
 
-@RequiredArgsConstructor
-public final class MineCommand implements TabExecutor {
-    protected static final List<NamedTextColor> COLORS = List
-        .of(NamedTextColor.GREEN, NamedTextColor.AQUA,
-            NamedTextColor.RED, NamedTextColor.LIGHT_PURPLE,
-            NamedTextColor.YELLOW, NamedTextColor.DARK_AQUA,
-            NamedTextColor.GOLD, NamedTextColor.BLUE);
-    private final ResourcePlugin plugin;
+public final class MineCommand extends AbstractCommand<ResourcePlugin> {
+    protected static final List<TextColor> COLORS = List.of(GREEN, AQUA, RED, LIGHT_PURPLE, YELLOW, DARK_AQUA, GOLD, BLUE);
+
+    protected MineCommand(final ResourcePlugin plugin) {
+        super(plugin, "resource");
+    }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!plugin.isMineServer && sender instanceof Player player) {
-            new RemotePlayerCommandMessage(player, label + " " + String.join(" ", args)).send(plugin.mineServerName);
+    protected void onEnable() {
+        rootNode.arguments("[biome]").description("Warp to a mining biome")
+            .completers(CommandArgCompleter.supplyIgnoreCaseList(this::listBiomeNames))
+            .remotePlayerCaller(this::mine);
+    }
+
+    protected boolean mine(RemotePlayer player, String[] args) {
+        if (!plugin.isMineServer && player.isPlayer()) {
+            Connect.get().dispatchRemoteCommand(player.getPlayer(), "mine " + String.join(" ", args), plugin.mineServerName);
             return true;
         }
-        String cmd = args.length > 0 ? args[0].toLowerCase() : null;
-        if (args.length == 0) {
-            listBiomes(sender);
+        final String command = args.length > 0
+            ? String.join(" ", args)
+            : null;
+        if (command == null) {
+            listBiomes(player);
             return true;
         }
-        if (args.length == 1 && args[0].equalsIgnoreCase("random")) {
-            random(sender);
+        if (command.equalsIgnoreCase("random")) {
+            random(player, command);
             return true;
         }
-        if (args.length == 1 && args[0].equalsIgnoreCase("end")) {
-            sender.sendMessage(Component.text("You need to find an End portal in a Mining Overworld Stronghold to get to the Mining End!",
-                                              NamedTextColor.GOLD));
+        if (command.equalsIgnoreCase("end")) {
+            player.sendMessage(text("You need to find an End portal in a Mining Overworld Stronghold to get to the Mining End!",
+                                    GOLD));
             return true;
         }
-        biome(sender, String.join(" ", args));
+        biome(player, command);
         return true;
     }
 
-    protected void listBiomes(CommandSender sender) {
+    protected void listBiomes(RemotePlayer player) {
         List<ComponentLike> biomeList = new ArrayList<>();
-        biomeList.add((Component.text().content("[Random]").color(NamedTextColor.GREEN))
-                      .clickEvent(ClickEvent.runCommand("/mine random"))
-                      .hoverEvent(HoverEvent.showText(Component.join(JoinConfiguration.separator(Component.newline()), new Component[] {
-                                      Component.text("/mine random", NamedTextColor.GREEN),
-                                      Component.text("Random biome", NamedTextColor.GRAY),
+        biomeList.add((text().content("[Random]").color(GREEN))
+                      .clickEvent(runCommand("/mine random"))
+                      .hoverEvent(showText(join(separator(newline()), new Component[] {
+                                      text("/mine random", GREEN),
+                                      text("Random biome", GRAY),
                                   }))));
         for (BiomeGroup biomeGroup : plugin.biomeGroups) {
             if (biomeGroup.count == 0) continue;
-            NamedTextColor color = COLORS.get(plugin.random.nextInt(COLORS.size()));
-            biomeList.add(Component.text().content("[" + biomeGroup.name + "]").color(color)
-                          .clickEvent(ClickEvent.runCommand("/mine " + biomeGroup.name))
-                          .hoverEvent(HoverEvent.showText(Component.join(JoinConfiguration.separator(Component.newline()), new Component[] {
-                                          Component.text("/mine " + biomeGroup.name, color),
-                                          Component.text("Warp to " + biomeGroup.name + " Biome", NamedTextColor.GRAY),
+            TextColor color = COLORS.get(plugin.random.nextInt(COLORS.size()));
+            biomeList.add(text().content("[" + biomeGroup.name + "]").color(color)
+                          .clickEvent(runCommand("/mine " + biomeGroup.name))
+                          .hoverEvent(showText(join(separator(newline()), new Component[] {
+                                          text("/mine " + biomeGroup.name, color),
+                                          text("Warp to " + biomeGroup.name + " Biome", GRAY),
                                       }))));
         }
-        biomeList.add((Component.text().content("[End]").color(NamedTextColor.AQUA))
-                      .clickEvent(ClickEvent.runCommand("/mine end"))
-                      .hoverEvent(HoverEvent.showText(Component.join(JoinConfiguration.separator(Component.newline()), new Component[] {
-                                      Component.text("Directions to the", NamedTextColor.GREEN),
-                                      Component.text("Mining End", NamedTextColor.AQUA),
+        biomeList.add((text().content("[End]").color(AQUA))
+                      .clickEvent(runCommand("/mine end"))
+                      .hoverEvent(showText(join(separator(newline()), new Component[] {
+                                      text("Directions to the", GREEN),
+                                      text("Mining End", AQUA),
                                   }))));
-        sender.sendMessage(Component.join(JoinConfiguration.noSeparators(), new Component[] {
-                    Component.empty(),
-                    Component.newline(),
-                    Component.text("        ", NamedTextColor.BLUE, TextDecoration.STRIKETHROUGH),
-                    Component.text("[ ", NamedTextColor.BLUE),
-                    Component.text("Mining Biomes", NamedTextColor.WHITE),
-                    Component.text(" ]", NamedTextColor.BLUE),
-                    Component.text("        ", NamedTextColor.BLUE, TextDecoration.STRIKETHROUGH),
-                    Component.newline(),
-                    Component.join(JoinConfiguration.separator(Component.space()), biomeList),
-                    Component.newline(),
-                    Component.empty(),
+        player.sendMessage(join(noSeparators(), new Component[] {
+                    empty(),
+                    newline(),
+                    text("        ", BLUE, STRIKETHROUGH),
+                    text("[ ", BLUE),
+                    text("Mining Biomes", WHITE),
+                    text(" ]", BLUE),
+                    text("        ", BLUE, STRIKETHROUGH),
+                    newline(),
+                    join(separator(space()), biomeList),
+                    newline(),
+                    empty(),
                 }));
     }
 
-    protected void random(CommandSender sender) {
+    protected void random(RemotePlayer player, String biomeName) {
         if (plugin.randomPlaces.isEmpty()) {
-            sender.sendMessage(Component.text("No biomes found", NamedTextColor.RED));
-            return;
+            throw new CommandWarn("No biomes found");
         }
-        if (!sender.hasPermission("resource.nocooldown")) {
-            int cd = plugin.getCooldownInSeconds(sender);
+        if (!player.hasPermission("resource.nocooldown")) {
+            int cd = plugin.getCooldownInSeconds(player.getUniqueId());
             if (cd > 0) {
-                sender.sendMessage(Component.text("You have to wait " + cd + " more seconds.", NamedTextColor.RED));
-                return;
+                throw new CommandWarn("You have to wait " + cd + " more seconds");
             }
         }
         Place place = plugin.randomPlaces.get(plugin.random.nextInt(plugin.randomPlaces.size()));
-        sender.sendMessage(Component.text("Warping to random mining biome...", NamedTextColor.GREEN));
-        if (sender instanceof Player player) {
-            place(player, place, "Random");
-        } else if (sender instanceof RemotePlayer player) {
-            place(player, place, "Random");
-        } else {
-            sender.sendMessage("[resource:mine] player expected");
-        }
+        player.sendMessage(text("Warping to random mining biome...", GREEN));
+        place(player, place, biomeName);
     }
 
-    protected void biome(CommandSender sender, String biomeName) {
+    protected void biome(RemotePlayer player, String biomeName) {
         BiomeGroup biomeGroup = null;
         for (BiomeGroup bg : plugin.biomeGroups) {
             if (bg.name.equalsIgnoreCase(biomeName)) {
@@ -125,84 +126,46 @@ public final class MineCommand implements TabExecutor {
             }
         }
         if (biomeGroup == null || biomeGroup.count == 0) {
-            sender.sendMessage(Component.text("Mining biome not found: " + biomeName, NamedTextColor.RED));
-            return;
+            throw new CommandWarn("Mining biome not found: " + biomeName);
         }
-        if (!sender.hasPermission("resource.nocooldown")) {
-            int cd = plugin.getCooldownInSeconds(sender);
+        if (!player.hasPermission("resource.nocooldown")) {
+            int cd = plugin.getCooldownInSeconds(player.getUniqueId());
             if (cd > 0) {
-                sender.sendMessage(Component.text("You have to wait " + cd + " more seconds.", NamedTextColor.RED));
-                return;
+                throw new CommandWarn("You have to wait " + cd + " more seconds.");
             }
         }
         Place place = biomeGroup.places.get(plugin.random.nextInt(biomeGroup.places.size()));
-        sender.sendMessage(Component.text("Warping to " + biomeGroup.name + " mining biome...", NamedTextColor.GREEN));
-        if (sender instanceof Player player) {
-            place(player, place, biomeName);
-        } else if (sender instanceof RemotePlayer player) {
-            place(player, place, biomeName);
-        } else {
-            sender.sendMessage("[resource:mine] player expected");
-        }
+        player.sendMessage(text("Warping to " + biomeGroup.name + " mining biome...", GREEN));
+        place(player, place, biomeName);
     }
 
-    protected void place(Player player, Place place, String biomeName) {
+    protected void place(RemotePlayer player, Place place, String biomeName) {
         plugin.findLocation(place, location -> {
                 if (location == null) {
-                    player.sendMessage(Component.text("Something went wrong. Please try again", NamedTextColor.RED));
+                    player.sendMessage(text("Something went wrong. Please try again", RED));
                     return;
                 }
-                Location pl = player.getLocation();
-                location.setYaw(pl.getYaw());
-                location.setPitch(pl.getPitch());
-                plugin.setCooldownInSeconds(player, plugin.playerCooldown);
-                player.teleport(location, TeleportCause.COMMAND);
+                plugin.setCooldownInSeconds(player.getUniqueId(), plugin.playerCooldown);
                 String log = String.format("[%s] Warp %s to %s %d %d %d",
                                            place.biome.name(), player.getName(), location.getWorld().getName(),
                                            location.getBlockX(), location.getBlockY(), location.getBlockZ());
                 plugin.getLogger().info(log);
-                PluginPlayerEvent.Name.USE_MINE.make(plugin, player)
-                    .detail(Detail.NAME, biomeName.toLowerCase())
-                    .callEvent();
-            });
-    }
-
-    protected void place(RemotePlayer remote, Place place, String biomeName) {
-        plugin.findLocation(place, location -> {
-                if (location == null) {
-                    remote.sendMessage(Component.text("Something went wrong. Please try again", NamedTextColor.RED));
-                    return;
-                }
-                boolean ticket = location.getChunk().addPluginChunkTicket(plugin);
-                remote.bring(plugin, location, player -> {
-                        if (ticket) location.getChunk().removePluginChunkTicket(plugin);
-                        if (player == null) {
-                            remote.sendMessage(Component.text("You timed out!", NamedTextColor.RED));
-                            return;
-                        }
-                        plugin.setCooldownInSeconds(player, plugin.playerCooldown);
-                        String log = String.format("[%s] Set Spawn Location %s to %s %d %d %d",
-                                                   place.biome.name(), player.getName(), location.getWorld().getName(),
-                                                   location.getBlockX(), location.getBlockY(), location.getBlockZ());
-                        plugin.getLogger().info(log);
-                        PluginPlayerEvent.Name.USE_MINE.make(plugin, player)
+                player.bring(plugin, location, player2 -> {
+                        if (player2 == null) return;
+                        PluginPlayerEvent.Name.USE_MINE.make(plugin, player2)
                             .detail(Detail.NAME, biomeName.toLowerCase())
                             .callEvent();
                     });
             });
     }
 
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length != 1) return List.of();
-        String arg = args[0].toLowerCase();
+    private List<String> listBiomeNames() {
         List<String> result = new ArrayList<>();
-        if ("random".contains(arg)) result.add("Random");
+        result.add("random");
         for (BiomeGroup biomeGroup : plugin.biomeGroups) {
-            if (!biomeGroup.name.toLowerCase().startsWith(arg)) continue;
-            if (biomeGroup.count == 0) continue;
             result.add(biomeGroup.name);
         }
+        result.add("end");
         return result;
     }
 }

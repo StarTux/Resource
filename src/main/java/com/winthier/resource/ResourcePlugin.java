@@ -1,7 +1,6 @@
 package com.winthier.resource;
 
-import com.cavetale.core.command.RemotePlayer;
-import com.winthier.connect.Connect;
+import com.cavetale.core.connect.NetworkServer;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -33,9 +32,7 @@ import org.bukkit.World;
 import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Waterlogged;
-import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class ResourcePlugin extends JavaPlugin {
@@ -74,26 +71,26 @@ public final class ResourcePlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        String serverName = Connect.getInstance().getServerName();
-        switch (serverName) {
-        case "cavetale": case "beta":
+        NetworkServer networkServer = NetworkServer.current();
+        switch (networkServer) {
+        case MINE: case BETA:
             isMineServer = true;
             doMineReset = true;
             break;
-        case "alpha":
+        case ALPHA:
             isMineServer = false;
             doMineReset = false;
             mineServerName = "beta";
             break;
-        case "bingo":
+        case BINGO:
             isMineServer = true;
             doMineReset = false;
             break;
         default:
             isMineServer = false;
-            mineServerName = "cavetale";
+            mineServerName = "mine";
         }
-        getCommand("resource").setExecutor(new MineCommand(this));
+        new MineCommand(this).enable();
         new AdminCommand(this).enable();
         if (isMineServer) {
             sidebarListener.enable();
@@ -102,7 +99,7 @@ public final class ResourcePlugin extends JavaPlugin {
             Bukkit.getScheduler().runTaskTimer(this, this::checkReset, 0L, 20L);
         }
         loadAll();
-        getLogger().info("server=" + serverName
+        getLogger().info("server=" + networkServer
                          + " isMineServer=" + isMineServer
                          + " doMineReset=" + doMineReset
                          + " worlds=" + worldNames);
@@ -379,30 +376,14 @@ public final class ResourcePlugin extends JavaPlugin {
         }
     }
 
-    protected void setCooldownInSeconds(CommandSender sender, int sec) {
-        UUID uuid;
-        if (sender instanceof Player player) {
-            uuid = player.getUniqueId();
-        } else if (sender instanceof RemotePlayer player) {
-            uuid = player.getUniqueId();
-        } else {
-            return;
-        }
+    protected void setCooldownInSeconds(UUID uuid, int sec) {
         long time = System.currentTimeMillis() + (long) sec * 1000;
         cooldowns.put(uuid, time);
     }
 
-    protected int getCooldownInSeconds(CommandSender sender) {
-        UUID uuid;
-        if (sender instanceof Player player) {
-            uuid = player.getUniqueId();
-        } else if (sender instanceof RemotePlayer player) {
-            uuid = player.getUniqueId();
-        } else {
-            return 0;
-        }
-        Long time = cooldowns.get(uuid);
-        if (time == null) return 0;
+    protected int getCooldownInSeconds(UUID uuid) {
+        long time = cooldowns.getOrDefault(uuid, 0L);
+        if (time == 0L) return 0;
         long result = time - System.currentTimeMillis();
         if (result < 0) return 0;
         return (int) (result / 1000);
