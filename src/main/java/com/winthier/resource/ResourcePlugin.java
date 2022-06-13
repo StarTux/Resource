@@ -48,6 +48,7 @@ public final class ResourcePlugin extends JavaPlugin {
             Biome.SMALL_END_ISLANDS,
             Biome.THE_END,
             Biome.THE_VOID,
+            Biome.DEEP_DARK,
         });
     protected final Random random = new Random(System.currentTimeMillis());
     // Configuration
