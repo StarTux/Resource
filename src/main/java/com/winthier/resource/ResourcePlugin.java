@@ -348,13 +348,16 @@ public final class ResourcePlugin extends JavaPlugin {
             } else {
                 resetImminent = false;
                 this.nextReset = lastReset;
-                do {
+                boolean enough = false;
+                while (!enough) {
                     nextReset = nextReset
-                        .withHour(14)
+                        .withHour(12)
                         .withMinute(0)
                         .withSecond(0)
                         .plusDays(1L);
-                } while (!nextReset.isAfter(lastReset) || nextReset.getDayOfWeek() != DayOfWeek.TUESDAY);
+                    enough = Duration.between(lastReset, nextReset).toDays() >= 13
+                        && nextReset.getDayOfWeek() == DayOfWeek.TUESDAY;
+                }
                 getLogger().info("Next reset: " + nextReset);
                 checkReset();
             }
