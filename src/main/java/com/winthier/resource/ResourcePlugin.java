@@ -1,6 +1,7 @@
 package com.winthier.resource;
 
 import com.cavetale.core.connect.NetworkServer;
+import com.cavetale.core.font.Unicode;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -24,6 +25,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.logging.Level;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -34,6 +36,10 @@ import org.bukkit.block.Block;
 import org.bukkit.block.data.Waterlogged;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.java.JavaPlugin;
+import static net.kyori.adventure.text.Component.join;
+import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
+import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 public final class ResourcePlugin extends JavaPlugin {
     // Put in this array all known biomes belonging to dimensions
@@ -56,7 +62,7 @@ public final class ResourcePlugin extends JavaPlugin {
     protected List<String> worldNames = List.of();
     protected final List<BiomeGroup> biomeGroups = new ArrayList<>();
     protected final EnumMap<Biome, Integer> locatedBiomes = new EnumMap<>(Biome.class);
-    protected SidebarListener sidebarListener = new SidebarListener(this);
+    protected SidebarListener sidebarListener;
     protected boolean isMineServer;
     protected boolean doMineReset;
     protected String mineServerName;
@@ -67,6 +73,7 @@ public final class ResourcePlugin extends JavaPlugin {
     protected LocalDateTime lastReset;
     protected LocalDateTime nextReset;
     protected Duration timeUntilReset = Duration.ZERO;
+    protected Component timeUntilResetFormat = Component.empty();
     protected boolean resetImminent;
     protected Set<String> warnedAboutBiomes = new HashSet<>();
 
@@ -94,6 +101,7 @@ public final class ResourcePlugin extends JavaPlugin {
         new MineCommand(this).enable();
         new AdminCommand(this).enable();
         if (isMineServer) {
+            sidebarListener = new SidebarListener(this);
             sidebarListener.enable();
         }
         if (isMineServer && doMineReset) {
@@ -375,9 +383,28 @@ public final class ResourcePlugin extends JavaPlugin {
             } catch (IOException ioe) {
                 getLogger().warning("Could not create " + mineResetFile);
             }
+            timeUntilResetFormat = text("Imminent", DARK_RED);
         } else {
             timeUntilReset = Duration.between(now, nextReset);
+            timeUntilResetFormat = formatDuration(timeUntilReset);
         }
+    }
+
+    private static Component formatDuration(Duration duration) {
+        final long seconds = duration.toSeconds();
+        final long minutes = duration.toMinutes();
+        final long hours = duration.toHours();
+        final long days = duration.toDays();
+        ArrayList<Component> list = new ArrayList<>(8);
+        list.add(text(days, WHITE));
+        list.add(text(Unicode.SMALLD.character, GRAY));
+        list.add(text(hours % 24, WHITE));
+        list.add(text(Unicode.SMALLH.character, GRAY));
+        list.add(text(minutes % 60, WHITE));
+        list.add(text(Unicode.SMALLM.character, GRAY));
+        list.add(text(Math.max(0, seconds % 60), WHITE));
+        list.add(text(Unicode.SMALLS.character, GRAY));
+        return join(noSeparators(), list);
     }
 
     protected void setCooldownInSeconds(UUID uuid, int sec) {
