@@ -363,7 +363,7 @@ public final class ResourcePlugin extends JavaPlugin {
                         .withMinute(0)
                         .withSecond(0)
                         .plusDays(1L);
-                    enough = Duration.between(lastReset, nextReset).toDays() >= 13
+                    enough = Duration.between(lastReset, nextReset).toDays() >= 20
                         && nextReset.getDayOfWeek() == DayOfWeek.TUESDAY;
                 }
                 getLogger().info("Next reset: " + nextReset);
