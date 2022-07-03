@@ -269,7 +269,8 @@ public final class ResourcePlugin extends JavaPlugin {
         for (String worldName : worldNames) {
             World world = Bukkit.getWorld(worldName);
             if (world == null) {
-                throw new IllegalStateException("World not found: " + worldName);
+                getLogger().severe("World not found: " + worldName);
+                continue;
             }
             if (world.getEnvironment() == World.Environment.THE_END) {
                 // Do not scan The End
