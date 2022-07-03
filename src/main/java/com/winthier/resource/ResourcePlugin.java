@@ -31,6 +31,7 @@ import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.WorldBorder;
 import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Waterlogged;
@@ -278,7 +279,15 @@ public final class ResourcePlugin extends JavaPlugin {
             if (!biomesFile.exists()) {
                 throw new IllegalStateException("Biomes file not found: " + biomesFile);
             }
+            WorldBorder worldBorder = world.getWorldBorder();
+            final double halfSize = worldBorder.getSize() * 0.5;
+            final Location center = worldBorder.getCenter();
+            final int borderWest = ((int) Math.ceil(center.getX() - halfSize)) >> 4;
+            final int borderEast = ((int) Math.floor(center.getX() + halfSize)) >> 4;
+            final int borderNorth = ((int) Math.ceil(center.getZ() - halfSize)) >> 4;
+            final int borderSouth = ((int) Math.floor(center.getZ() + halfSize)) >> 4;
             int worldTotalPlaces = 0;
+            int outsideBorderCount = 0;
             try (BufferedReader reader = new BufferedReader(new FileReader(biomesFile))) {
                 while (true) {
                     String line = reader.readLine();
@@ -292,6 +301,10 @@ public final class ResourcePlugin extends JavaPlugin {
                     try {
                         chunkX = Integer.parseInt(toks[0]);
                         chunkZ = Integer.parseInt(toks[1]);
+                        if (chunkX <= borderWest || chunkX >= borderEast || chunkZ <= borderNorth || chunkZ >= borderSouth) {
+                            outsideBorderCount += 1;
+                            continue;
+                        }
                         for (int i = 2; i < toks.length; i += 1) {
                             String tok = toks[i];
                             String[] toks2 = tok.split(":");
@@ -340,7 +353,7 @@ public final class ResourcePlugin extends JavaPlugin {
             } catch (IOException ioe) {
                 throw new UncheckedIOException(ioe);
             }
-            getLogger().info(worldName + ": Total Places: " + worldTotalPlaces);
+            getLogger().info(worldName + " total=" + worldTotalPlaces + " outside=" + outsideBorderCount);
         }
         cooldowns.clear();
         if (isMineServer && doMineReset) {
