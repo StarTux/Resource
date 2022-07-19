@@ -397,7 +397,7 @@ public final class ResourcePlugin extends JavaPlugin {
             } catch (IOException ioe) {
                 getLogger().warning("Could not create " + mineResetFile);
             }
-            timeUntilResetFormat = text("Imminent", DARK_RED);
+            timeUntilResetFormat = text("Soon", DARK_RED);
         } else {
             timeUntilReset = Duration.between(now, nextReset);
             timeUntilResetFormat = formatDuration(timeUntilReset);

@@ -35,7 +35,7 @@ public final class SidebarListener implements Listener {
         case THE_END: displayName = "End"; break;
         default: displayName = "Overworld";
         }
-        header.add(join(noSeparators(), text(tiny("mining world "), GRAY), text(displayName, AQUA)));
+        header.add(join(noSeparators(), text(tiny("mining "), GRAY), text(displayName, AQUA)));
         if (plugin.doMineReset) {
             header.add(join(noSeparators(), text(tiny("mining reset "), GRAY), plugin.timeUntilResetFormat));
         }
