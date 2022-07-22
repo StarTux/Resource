@@ -386,8 +386,13 @@ public final class ResourcePlugin extends JavaPlugin {
         }
     }
 
+    private static final Component SOON = text("Soon\u2122", DARK_RED);
+
     protected void checkReset() {
-        if (resetImminent) return;
+        if (resetImminent) {
+            timeUntilResetFormat = SOON;
+            return;
+        }
         LocalDateTime now = LocalDateTime.now();
         if (now.isAfter(nextReset)) {
             resetImminent = true;
@@ -397,7 +402,7 @@ public final class ResourcePlugin extends JavaPlugin {
             } catch (IOException ioe) {
                 getLogger().warning("Could not create " + mineResetFile);
             }
-            timeUntilResetFormat = text("Soon", DARK_RED);
+            timeUntilResetFormat = SOON;
         } else {
             timeUntilReset = Duration.between(now, nextReset);
             timeUntilResetFormat = formatDuration(timeUntilReset);
