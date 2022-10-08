@@ -8,7 +8,7 @@ description: Warp to resource biomes
 author: StarTux
 website: https://cavetale.com
 
-depend: [Core]
+depend: [Core, Structure]
 
 commands:
 

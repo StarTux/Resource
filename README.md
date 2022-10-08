@@ -2,6 +2,7 @@
 
 Locate biomes of interest in the mining world
 
-## Files
+## Dependencies
 
-We read the `biomes.txt` in the world folders, produced by the `Decorator` plugin.
+Biomes are provided by the Structure plugin.  The actual database is
+populated by the worldgen server using the NBTDump jar.

@@ -2,12 +2,10 @@ package com.winthier.resource;
 
 import com.cavetale.core.connect.NetworkServer;
 import com.cavetale.core.font.Unicode;
-import java.io.BufferedReader;
+import com.cavetale.core.struct.Vec2i;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
@@ -24,7 +22,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.logging.Level;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
@@ -37,6 +34,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.data.Waterlogged;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.java.JavaPlugin;
+import static com.cavetale.structure.StructurePlugin.structureCache;
 import static net.kyori.adventure.text.Component.join;
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
@@ -276,10 +274,6 @@ public final class ResourcePlugin extends JavaPlugin {
                 // Do not scan The End
                 continue;
             }
-            File biomesFile = new File(world.getWorldFolder(), "biomes.txt");
-            if (!biomesFile.exists()) {
-                throw new IllegalStateException("Biomes file not found: " + biomesFile);
-            }
             WorldBorder worldBorder = world.getWorldBorder();
             final double halfSize = worldBorder.getSize() * 0.5;
             final Location center = worldBorder.getCenter();
@@ -289,70 +283,29 @@ public final class ResourcePlugin extends JavaPlugin {
             final int borderSouth = ((int) Math.floor(center.getZ() + halfSize)) >> 4;
             int worldTotalPlaces = 0;
             int outsideBorderCount = 0;
-            try (BufferedReader reader = new BufferedReader(new FileReader(biomesFile))) {
-                while (true) {
-                    String line = reader.readLine();
-                    if (line == null) break;
-                    String[] toks = line.split(",");
-                    if (toks.length < 3) continue;
-                    int chunkX;
-                    int chunkZ;
-                    Biome chunkBiome = null;
-                    int max = 0;
-                    try {
-                        chunkX = Integer.parseInt(toks[0]);
-                        chunkZ = Integer.parseInt(toks[1]);
-                        if (chunkX <= borderWest || chunkX >= borderEast || chunkZ <= borderNorth || chunkZ >= borderSouth) {
-                            outsideBorderCount += 1;
-                            continue;
-                        }
-                        for (int i = 2; i < toks.length; i += 1) {
-                            String tok = toks[i];
-                            String[] toks2 = tok.split(":");
-                            if (toks2.length > 2) throw new IllegalArgumentException(tok);
-                            Biome biome;
-                            String biomeName = toks2[0];
-                            try {
-                                biome = Biome.valueOf(biomeName);
-                            } catch (IllegalArgumentException iae) {
-                                if (!warnedAboutBiomes.contains(biomeName)) {
-                                    warnedAboutBiomes.add(biomeName);
-                                    getLogger().warning(biomesFile + ": Biome not found: " + biomeName);
-                                }
-                                continue;
-                            }
-                            int count = toks2.length >= 2
-                                ? Integer.parseInt(toks2[1])
-                                : 1; // legacy
-                            if (count > max) {
-                                max = count;
-                                chunkBiome = biome;
-                            }
-                        }
-                        if (chunkBiome == null) {
-                            continue;
-                        }
-                        Place place = new Place(worldName, chunkX, chunkZ, chunkBiome);
-                        places.add(place);
-                        int placeBiomeGroups = 0;
-                        for (BiomeGroup biomeGroup : biomeGroups) {
-                            if (biomeGroup.biomes.contains(chunkBiome)) {
-                                biomeGroup.places.add(place);
-                                biomeGroup.count += 1;
-                                placeBiomeGroups += 1;
-                            }
-                        }
-                        if (world.getEnvironment() != World.Environment.NETHER && !chunkBiome.name().contains("OCEAN")) {
-                            randomPlaces.add(place);
-                        }
-                        if (placeBiomeGroups > 0) worldTotalPlaces += 1;
-                    } catch (IllegalArgumentException iae) {
-                        getLogger().log(Level.SEVERE, "Invalid line: " + line, iae);
-                        break;
+            final boolean nether = world.getEnvironment() == World.Environment.NETHER;
+            Map<Vec2i, Biome> biomes = structureCache().allBiomes(world);
+            for (Map.Entry<Vec2i, Biome> entry : biomes.entrySet()) {
+                final Vec2i vec = entry.getKey();
+                final Biome biome = entry.getValue();
+                if (vec.x <= borderWest || vec.x >= borderEast || vec.z <= borderNorth || vec.z >= borderSouth) {
+                    outsideBorderCount += 1;
+                    continue;
+                }
+                Place place = new Place(worldName, vec.x, vec.z, biome);
+                places.add(place);
+                int placeBiomeGroups = 0;
+                for (BiomeGroup biomeGroup : biomeGroups) {
+                    if (biomeGroup.biomes.contains(biome)) {
+                        biomeGroup.places.add(place);
+                        biomeGroup.count += 1;
+                        placeBiomeGroups += 1;
                     }
                 }
-            } catch (IOException ioe) {
-                throw new UncheckedIOException(ioe);
+                if (!nether && !biome.name().contains("OCEAN")) {
+                    randomPlaces.add(place);
+                }
+                if (placeBiomeGroups > 0) worldTotalPlaces += 1;
             }
             getLogger().info(worldName + " total=" + worldTotalPlaces + " outside=" + outsideBorderCount);
         }
