@@ -283,11 +283,16 @@ public final class ResourcePlugin extends JavaPlugin {
             final int borderSouth = ((int) Math.floor(center.getZ() + halfSize)) >> 4;
             int worldTotalPlaces = 0;
             int outsideBorderCount = 0;
+            int netherPlainsCount = 0;
             final boolean nether = world.getEnvironment() == World.Environment.NETHER;
             Map<Vec2i, Biome> biomes = structureCache().allBiomes(world);
             for (Map.Entry<Vec2i, Biome> entry : biomes.entrySet()) {
                 final Vec2i vec = entry.getKey();
                 final Biome biome = entry.getValue();
+                if (nether && biome == Biome.PLAINS) {
+                    netherPlainsCount += 1;
+                    continue;
+                }
                 if (vec.x <= borderWest || vec.x >= borderEast || vec.z <= borderNorth || vec.z >= borderSouth) {
                     outsideBorderCount += 1;
                     continue;
@@ -308,6 +313,9 @@ public final class ResourcePlugin extends JavaPlugin {
                 if (placeBiomeGroups > 0) worldTotalPlaces += 1;
             }
             getLogger().info(worldName + " total=" + worldTotalPlaces + " outside=" + outsideBorderCount);
+            if (nether && netherPlainsCount > 0) {
+                getLogger().info(worldName + " netherPlains=" + netherPlainsCount);
+            }
         }
         cooldowns.clear();
         if (isMineServer && doMineReset) {
