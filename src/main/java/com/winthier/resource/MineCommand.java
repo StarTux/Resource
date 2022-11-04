@@ -55,7 +55,9 @@ public final class MineCommand extends AbstractCommand<ResourcePlugin> {
             return true;
         }
         if (command.equalsIgnoreCase("end")) {
-            player.sendMessage(text("You need to find an End portal in a Mining Overworld Stronghold to get to the Mining End!",
+            player.sendMessage(text("There is no warp for the Mine End."
+                                    + " You will always need to find an End portal in a"
+                                    + " Mine world stronghold to get to the Mine End.",
                                     GOLD));
             return true;
         }
