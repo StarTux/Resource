@@ -6,7 +6,6 @@ import com.cavetale.core.struct.Vec2i;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -338,8 +337,8 @@ public final class ResourcePlugin extends JavaPlugin {
                         .withMinute(0)
                         .withSecond(0)
                         .plusDays(1L);
-                    enough = Duration.between(lastReset, nextReset).toDays() >= 13
-                        && nextReset.getDayOfWeek() == DayOfWeek.TUESDAY;
+                    enough = nextReset.getYear() > lastReset.getYear()
+                        || nextReset.getMonth().getValue() > lastReset.getMonth().getValue();
                 }
                 getLogger().info("Next reset: " + nextReset);
                 checkReset();
