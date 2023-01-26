@@ -37,3 +37,7 @@ permissions:
   resource.admin:
     description: Use admin subcommands
     default: op
+
+  resource.back:
+    description: Store back location
+    default: true

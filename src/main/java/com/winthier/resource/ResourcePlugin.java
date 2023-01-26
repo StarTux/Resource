@@ -1,5 +1,6 @@
 package com.winthier.resource;
 
+import com.cavetale.core.back.Back;
 import com.cavetale.core.connect.NetworkServer;
 import com.cavetale.core.font.Unicode;
 import com.cavetale.core.struct.Vec2i;
@@ -101,6 +102,7 @@ public final class ResourcePlugin extends JavaPlugin {
         if (isMineServer) {
             sidebarListener = new SidebarListener(this);
             sidebarListener.enable();
+            new BackListener(this).enable();
         }
         if (isMineServer && doMineReset) {
             Bukkit.getScheduler().runTaskTimer(this, this::checkReset, 0L, 20L);
@@ -130,6 +132,14 @@ public final class ResourcePlugin extends JavaPlugin {
                 callback.accept(target);
                 return;
             });
+    }
+
+    public boolean isMineServer() {
+        return isMineServer;
+    }
+
+    public boolean isMineWorld(World world) {
+        return worldNames.contains(world.getName());
     }
 
     private Location findLocationOverworld(Place place, Chunk chunk) {
@@ -320,6 +330,11 @@ public final class ResourcePlugin extends JavaPlugin {
         if (isMineServer && doMineReset) {
             File mineResetFile = new File("MINE_RESET");
             File lastResetFile = new File("MINE_WORLD");
+            File mineIsNewFile = new File("MINE_IS_NEW");
+            if (mineIsNewFile.exists()) {
+                mineIsNewFile.delete();
+                Back.resetAllBackLocations(this);
+            }
             LocalDateTime now = LocalDateTime.now();
             this.lastReset = lastResetFile.exists()
                 ? LocalDateTime.ofInstant(Instant.ofEpochMilli(lastResetFile.lastModified()), ZoneId.systemDefault())
