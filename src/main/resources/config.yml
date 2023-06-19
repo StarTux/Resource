@@ -31,6 +31,9 @@ Biomes:
 - Name: Flower Forest
   Biomes:
   - FLOWER_FOREST
+- Name: Cherry
+  Biomes:
+  - CHERRY_GROVE
 - Name: Swamp
   Biomes:
   - SWAMP
