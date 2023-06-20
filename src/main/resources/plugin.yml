@@ -1,4 +1,4 @@
-cleamain: com.winthier.resource.ResourcePlugin
+main: com.winthier.resource.ResourcePlugin
 name: Resource
 
 version: 0.1
