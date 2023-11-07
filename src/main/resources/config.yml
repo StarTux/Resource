@@ -37,6 +37,8 @@ Biomes:
 - Name: Swamp
   Biomes:
   - SWAMP
+- Name: Mangrove
+  Biomes:
   - MANGROVE_SWAMP
 - Name: Taiga
   Biomes:
