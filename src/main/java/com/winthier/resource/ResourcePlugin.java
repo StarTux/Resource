@@ -226,7 +226,17 @@ public final class ResourcePlugin extends JavaPlugin {
 
     protected void loadAll() {
         parseConfig();
-        loadBiomes();
+        if (!isMineServer) {
+            for (BiomeGroup biomeGroup : biomeGroups) {
+                biomeGroup.count = 1;
+            }
+            return;
+        } else {
+            if (!Bukkit.getPluginManager().isPluginEnabled("Structure")) {
+                throw new IllegalStateException("Structure plugin not enabled!");
+            }
+            loadBiomesFromWorlds();
+        }
     }
 
     protected void parseConfig() {
@@ -264,13 +274,7 @@ public final class ResourcePlugin extends JavaPlugin {
         }
     }
 
-    protected void loadBiomes() {
-        if (!isMineServer) {
-            for (BiomeGroup biomeGroup : biomeGroups) {
-                biomeGroup.count = 1;
-            }
-            return;
-        }
+    private void loadBiomesFromWorlds() {
         places.clear();
         randomPlaces.clear();
         for (String worldName : worldNames) {
