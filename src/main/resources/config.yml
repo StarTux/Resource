@@ -69,10 +69,7 @@ Biomes:
 - Name: Cold
   Biomes:
   - ICE_SPIKES
-  - SNOWY_BEACH
   - SNOWY_TAIGA
-  - FROZEN_OCEAN
-  - COLD_OCEAN
   - FROZEN_RIVER
   - SNOWY_PLAINS
   - SNOWY_SLOPES
@@ -94,12 +91,15 @@ Biomes:
   - DEEP_LUKEWARM_OCEAN
   - DEEP_COLD_OCEAN
   - DEEP_FROZEN_OCEAN
-  - BEACH
-  - STONY_SHORE
 - Name: River
   Biomes:
   - RIVER
   - FROZEN_RIVER
+- Name: Beach
+  Biomes:
+  - SNOWY_BEACH
+  - BEACH
+  - STONY_SHORE
 - Name: Mooshroom
   Biomes:
   - MUSHROOM_FIELDS
