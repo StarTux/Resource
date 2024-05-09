@@ -35,6 +35,8 @@ import org.bukkit.block.data.Waterlogged;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.java.JavaPlugin;
 import static com.cavetale.structure.StructurePlugin.structureCache;
+import static java.util.Collections.sort;
+import static java.util.Comparator.comparing;
 import static net.kyori.adventure.text.Component.join;
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
@@ -269,6 +271,7 @@ public final class ResourcePlugin extends JavaPlugin {
             }
             biomeGroups.add(new BiomeGroup(name, biomes));
         }
+        sort(biomeGroups, comparing(BiomeGroup::getName));
         if (!excludedBiomes.isEmpty()) {
             getLogger().warning("Biomes not mentioned in config.yml: " + excludedBiomes);
         }

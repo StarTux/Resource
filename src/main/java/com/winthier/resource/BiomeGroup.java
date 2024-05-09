@@ -5,8 +5,10 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import lombok.Data;
 import org.bukkit.block.Biome;
 
+@Data
 public final class BiomeGroup {
     public final String name;
     public final Set<Biome> biomes;
