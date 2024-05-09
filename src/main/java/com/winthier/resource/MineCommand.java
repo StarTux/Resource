@@ -9,7 +9,6 @@ import com.cavetale.core.event.player.PluginPlayerEvent;
 import com.cavetale.core.event.player.PluginPlayerEvent.Detail;
 import java.util.ArrayList;
 import java.util.List;
-import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.format.TextColor;
 import static net.kyori.adventure.text.Component.empty;
@@ -17,7 +16,7 @@ import static net.kyori.adventure.text.Component.join;
 import static net.kyori.adventure.text.Component.newline;
 import static net.kyori.adventure.text.Component.space;
 import static net.kyori.adventure.text.Component.text;
-import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
+import static net.kyori.adventure.text.Component.textOfChildren;
 import static net.kyori.adventure.text.JoinConfiguration.separator;
 import static net.kyori.adventure.text.event.ClickEvent.runCommand;
 import static net.kyori.adventure.text.event.HoverEvent.showText;
@@ -67,41 +66,34 @@ public final class MineCommand extends AbstractCommand<ResourcePlugin> {
 
     protected void listBiomes(RemotePlayer player) {
         List<ComponentLike> biomeList = new ArrayList<>();
-        biomeList.add((text().content("[Random]").color(GREEN))
+        biomeList.add((text("[Random]", GREEN))
                       .clickEvent(runCommand("/mine random"))
-                      .hoverEvent(showText(join(separator(newline()), new Component[] {
-                                      text("/mine random", GREEN),
-                                      text("Random biome", GRAY),
-                                  }))));
+                      .hoverEvent(showText(join(separator(newline()),
+                                                List.of(text("/mine random", GREEN),
+                                                        text("Random biome", GRAY))))));
         for (BiomeGroup biomeGroup : plugin.biomeGroups) {
             if (biomeGroup.count == 0) continue;
             TextColor color = COLORS.get(plugin.random.nextInt(COLORS.size()));
-            biomeList.add(text().content("[" + biomeGroup.name + "]").color(color)
+            biomeList.add(text("[" + biomeGroup.name + "]", color)
                           .clickEvent(runCommand("/mine " + biomeGroup.name))
-                          .hoverEvent(showText(join(separator(newline()), new Component[] {
-                                          text("/mine " + biomeGroup.name, color),
-                                          text("Warp to " + biomeGroup.name + " Biome", GRAY),
-                                      }))));
+                          .hoverEvent(showText(join(separator(newline()),
+                                                    List.of(text("/mine " + biomeGroup.name, color),
+                                                            text("Warp to " + biomeGroup.name + " Biome", GRAY))))));
         }
-        biomeList.add((text().content("[End]").color(AQUA))
+        biomeList.add((text("[End]", AQUA))
                       .clickEvent(runCommand("/mine end"))
-                      .hoverEvent(showText(join(separator(newline()), new Component[] {
-                                      text("Directions to the", GREEN),
-                                      text("Mining End", AQUA),
-                                  }))));
-        player.sendMessage(join(noSeparators(), new Component[] {
-                    empty(),
-                    newline(),
-                    text("        ", BLUE, STRIKETHROUGH),
-                    text("[ ", BLUE),
-                    text("Mining Biomes", WHITE),
-                    text(" ]", BLUE),
-                    text("        ", BLUE, STRIKETHROUGH),
-                    newline(),
-                    join(separator(space()), biomeList),
-                    newline(),
-                    empty(),
-                }));
+                      .hoverEvent(showText(join(separator(newline()),
+                                                List.of(text("Directions to the", GREEN),
+                                                        text("Mining End", AQUA))))));
+        player.sendMessage(join(separator(newline()),
+                                List.of(empty(),
+                                        textOfChildren(text("        ", BLUE, STRIKETHROUGH),
+                                                       text("[ ", BLUE),
+                                                       text("Mining Biomes", WHITE),
+                                                       text(" ]", BLUE),
+                                                       text("        ", BLUE, STRIKETHROUGH)),
+                                        join(separator(space()), biomeList),
+                                        empty())));
     }
 
     protected void random(RemotePlayer player, String biomeName) {
