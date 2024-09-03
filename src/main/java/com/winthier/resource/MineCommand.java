@@ -100,8 +100,7 @@ public final class MineCommand extends AbstractCommand<ResourcePlugin> {
         }
         Place place = plugin.randomPlaces.get(plugin.random.nextInt(plugin.randomPlaces.size()));
         this.sendPlace(player, place, command, success -> {
-            if (success) return;
-            this.sendRandom(player, command, tries - 1);
+            if (!success) this.sendRandom(player, command, tries - 1);
         });
     }
 
@@ -112,8 +111,7 @@ public final class MineCommand extends AbstractCommand<ResourcePlugin> {
         }
         Place place = biomes.places.get(plugin.random.nextInt(biomes.places.size()));
         this.sendPlace(player, place, biomes.getName(), success -> {
-            if (success) return;
-            this.sendBiome(player, biomes, tries - 1);
+            if (!success) this.sendBiome(player, biomes, tries - 1);
         });
     }
 
