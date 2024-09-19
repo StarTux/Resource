@@ -132,8 +132,7 @@ public final class ResourcePlugin extends JavaPlugin {
                     ? findLocationNether(place, chunk)
                     : findLocationOverworld(place, chunk);
                 callback.accept(target);
-                return;
-            });
+        });
     }
 
     public boolean isMineServer() {
