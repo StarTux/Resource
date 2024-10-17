@@ -33,7 +33,7 @@ permissions:
 
   resource.nocooldown:
     description: Skip the cooldown
-    default: false
+    default: op
 
   resource.admin:
     description: Use admin subcommands
