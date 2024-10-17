@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.format.TextColor;
+import org.bukkit.Bukkit;
 import static net.kyori.adventure.text.Component.empty;
 import static net.kyori.adventure.text.Component.join;
 import static net.kyori.adventure.text.Component.newline;
@@ -136,7 +137,12 @@ public final class MineCommand extends AbstractCommand<ResourcePlugin> {
     protected void place(RemotePlayer player, Place place, String biomeName) {
         plugin.findLocation(place, location -> {
                 if (location == null) {
-                    player.sendMessage(text("Something went wrong. Please try again", RED));
+                    plugin.getLogger().info("Fail and try again: " + player.getName() + " " + biomeName);
+                    if ("random".equalsIgnoreCase("random")) {
+                        Bukkit.getScheduler().runTask(plugin, () -> random(player, biomeName));
+                    } else {
+                        Bukkit.getScheduler().runTask(plugin, () -> biome(player, biomeName));
+                    }
                     return;
                 }
                 plugin.setCooldownInSeconds(player.getUniqueId(), plugin.playerCooldown);
