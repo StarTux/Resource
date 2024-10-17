@@ -1,5 +1,5 @@
 Worlds: [mine, mine_nether, mine_the_end]
-PlayerCooldown: 10
+PlayerCooldown: 60
 Biomes:
 - Name: Plains
   Biomes:
