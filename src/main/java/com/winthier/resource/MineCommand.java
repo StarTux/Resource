@@ -137,7 +137,7 @@ public final class MineCommand extends AbstractCommand<ResourcePlugin> {
     protected void place(RemotePlayer player, Place place, final String biomeName) {
         plugin.findLocation(place, location -> {
                 if (location == null) {
-                    if ("random".equalsIgnoreCase("random")) {
+                    if ("random".equalsIgnoreCase(biomeName)) {
                         Bukkit.getScheduler().runTask(plugin, () -> random(player, biomeName));
                         plugin.getLogger().info("Fail and try again (random): " + player.getName() + " " + biomeName);
                     } else {
