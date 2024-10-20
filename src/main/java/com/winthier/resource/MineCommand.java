@@ -97,7 +97,7 @@ public final class MineCommand extends AbstractCommand<ResourcePlugin> {
                                         empty())));
     }
 
-    protected void random(RemotePlayer player, String biomeName) {
+    protected void random(RemotePlayer player, final String biomeName) {
         if (plugin.randomPlaces.isEmpty()) {
             throw new CommandWarn("No biomes found");
         }
@@ -112,7 +112,7 @@ public final class MineCommand extends AbstractCommand<ResourcePlugin> {
         place(player, place, biomeName);
     }
 
-    protected void biome(RemotePlayer player, String biomeName) {
+    protected void biome(RemotePlayer player, final String biomeName) {
         BiomeGroup biomeGroup = null;
         for (BiomeGroup bg : plugin.biomeGroups) {
             if (bg.name.equalsIgnoreCase(biomeName)) {
@@ -134,14 +134,15 @@ public final class MineCommand extends AbstractCommand<ResourcePlugin> {
         place(player, place, biomeName);
     }
 
-    protected void place(RemotePlayer player, Place place, String biomeName) {
+    protected void place(RemotePlayer player, Place place, final String biomeName) {
         plugin.findLocation(place, location -> {
                 if (location == null) {
-                    plugin.getLogger().info("Fail and try again: " + player.getName() + " " + biomeName);
                     if ("random".equalsIgnoreCase("random")) {
                         Bukkit.getScheduler().runTask(plugin, () -> random(player, biomeName));
+                        plugin.getLogger().info("Fail and try again (random): " + player.getName() + " " + biomeName);
                     } else {
                         Bukkit.getScheduler().runTask(plugin, () -> biome(player, biomeName));
+                        plugin.getLogger().info("Fail and try again (biome): " + player.getName() + " " + biomeName);
                     }
                     return;
                 }
