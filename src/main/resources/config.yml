@@ -107,6 +107,8 @@ Biomes:
   Biomes:
   - NETHER_WASTES
   - SOUL_SAND_VALLEY
+  - BASALT_DELTAS
+- Name: Nether Forest
+  Biomes:
   - CRIMSON_FOREST
   - WARPED_FOREST
-  - BASALT_DELTAS
