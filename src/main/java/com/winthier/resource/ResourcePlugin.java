@@ -12,8 +12,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -45,24 +43,22 @@ import static net.kyori.adventure.text.format.NamedTextColor.*;
 public final class ResourcePlugin extends JavaPlugin {
     // Put in this array all known biomes belonging to dimensions
     // which are not supported by this plugin.
-    protected static final EnumSet<Biome> IGNORED_BIOMES = EnumSet.of(Biome.CUSTOM, new Biome[] {
-            Biome.CUSTOM,
-            Biome.DRIPSTONE_CAVES,
-            Biome.END_BARRENS,
-            Biome.END_HIGHLANDS,
-            Biome.END_MIDLANDS,
-            Biome.LUSH_CAVES,
-            Biome.SMALL_END_ISLANDS,
-            Biome.THE_END,
-            Biome.THE_VOID,
-            Biome.DEEP_DARK,
-        });
+    protected static final Set<Biome> IGNORED_BIOMES = Set.of(Biome.CUSTOM,
+                                                              Biome.DRIPSTONE_CAVES,
+                                                              Biome.END_BARRENS,
+                                                              Biome.END_HIGHLANDS,
+                                                              Biome.END_MIDLANDS,
+                                                              Biome.LUSH_CAVES,
+                                                              Biome.SMALL_END_ISLANDS,
+                                                              Biome.THE_END,
+                                                              Biome.THE_VOID,
+                                                              Biome.DEEP_DARK);
     protected final Random random = new Random(System.currentTimeMillis());
     // Configuration
     protected int playerCooldown = 5;
     protected List<String> worldNames = List.of();
     protected final List<BiomeGroup> biomeGroups = new ArrayList<>();
-    protected final EnumMap<Biome, Integer> locatedBiomes = new EnumMap<>(Biome.class);
+    protected final Map<Biome, Integer> locatedBiomes = new HashMap<>();
     protected SidebarListener sidebarListener;
     protected boolean isMineServer;
     protected boolean doMineReset;
@@ -246,7 +242,11 @@ public final class ResourcePlugin extends JavaPlugin {
         worldNames = getConfig().getStringList("Worlds");
         playerCooldown = getConfig().getInt("PlayerCooldown");
         biomeGroups.clear();
-        Set<Biome> excludedBiomes = EnumSet.complementOf(IGNORED_BIOMES);
+        final Set<Biome> excludedBiomes = new HashSet<>();
+        for (Biome biome : Biome.values()) {
+            if (IGNORED_BIOMES.contains(biome)) continue;
+            excludedBiomes.add(biome);
+        }
         for (Map<?, ?> map: getConfig().getMapList("Biomes")) {
             ConfigurationSection section = getConfig().createSection("tmp", map);
             List<Biome> biomes = new ArrayList<>();
