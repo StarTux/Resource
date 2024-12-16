@@ -2,10 +2,12 @@ Worlds: [mine, mine_nether, mine_the_end]
 PlayerCooldown: 60
 Biomes:
 - Name: Plains
+  Icon: sunflower
   Biomes:
   - PLAINS
   - SUNFLOWER_PLAINS
 - Name: Forest
+  Icon: oak_log
   Biomes:
   - FOREST
   - BIRCH_FOREST
@@ -14,10 +16,12 @@ Biomes:
   - OLD_GROWTH_BIRCH_FOREST
   - WINDSWEPT_FOREST
 - Name: Windswept
+  Icon: wind_charge
   Biomes:
   - WINDSWEPT_HILLS
   - WINDSWEPT_GRAVELLY_HILLS
 - Name: Mountains
+  Icon: stone_stairs
   Biomes:
   - SNOWY_SLOPES
   - MEADOW
@@ -26,47 +30,59 @@ Biomes:
   - FROZEN_PEAKS
   - STONY_PEAKS
 - Name: Dark Forest
+  Icon: dark_oak_log
   Biomes:
   - DARK_FOREST
 - Name: Flower Forest
+  Icon: lilac
   Biomes:
   - FLOWER_FOREST
 - Name: Cherry
+  Icon: cherry_leaves
   Biomes:
   - CHERRY_GROVE
 - Name: Swamp
+  Icon: lily_pad
   Biomes:
   - SWAMP
 - Name: Mangrove
+  Icon: mud
   Biomes:
   - MANGROVE_SWAMP
 - Name: Taiga
+  Icon: spruce_leaves
   Biomes:
   - TAIGA
   - SNOWY_TAIGA
   - OLD_GROWTH_PINE_TAIGA
   - OLD_GROWTH_SPRUCE_TAIGA
 - Name: Desert
+  Icon: sand
   Biomes:
   - DESERT
 - Name: Jungle
+  Icon: jungle_log
   Biomes:
   - JUNGLE
   - SPARSE_JUNGLE
 - Name: Bamboo
+  Icon: bamboo
   Biomes:
   - BAMBOO_JUNGLE
 - Name: Mesa
+  Icon: red_sand
   Biomes:
   - BADLANDS
   - ERODED_BADLANDS
   - WOODED_BADLANDS
 - Name: Savanna
+  Icon: acacia_log
   Biomes:
   - SAVANNA
   - SAVANNA_PLATEAU
   - WINDSWEPT_SAVANNA
 - Name: Cold
+  Icon: snowball
   Biomes:
   - ICE_SPIKES
   - SNOWY_TAIGA
@@ -75,12 +91,14 @@ Biomes:
   - SNOWY_SLOPES
   - FROZEN_PEAKS
 - Name: Frozen
+  Icon: ice
   Biomes:
   - FROZEN_OCEAN
   - FROZEN_RIVER
   - ICE_SPIKES
   - DEEP_FROZEN_OCEAN
 - Name: Ocean
+  Icon: oak_boat
   Biomes:
   - OCEAN
   - FROZEN_OCEAN
@@ -92,23 +110,28 @@ Biomes:
   - DEEP_COLD_OCEAN
   - DEEP_FROZEN_OCEAN
 - Name: River
+  Icon: fishing_rod
   Biomes:
   - RIVER
   - FROZEN_RIVER
 - Name: Beach
+  Icon: mytems:clamshell
   Biomes:
   - SNOWY_BEACH
   - BEACH
   - STONY_SHORE
 - Name: Mooshroom
+  Icon: mycelium
   Biomes:
   - MUSHROOM_FIELDS
 - Name: Nether
+  Icon: netherrack
   Biomes:
   - NETHER_WASTES
   - SOUL_SAND_VALLEY
   - BASALT_DELTAS
 - Name: Nether Forest
+  Icon: crimson_fungus
   Biomes:
   - CRIMSON_FOREST
   - WARPED_FOREST

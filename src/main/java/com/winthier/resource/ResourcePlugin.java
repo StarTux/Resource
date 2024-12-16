@@ -4,6 +4,8 @@ import com.cavetale.core.back.Back;
 import com.cavetale.core.connect.NetworkServer;
 import com.cavetale.core.font.Unicode;
 import com.cavetale.core.struct.Vec2i;
+import com.cavetale.mytems.Mytems;
+import com.cavetale.mytems.util.Items;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -20,6 +22,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
+import lombok.Getter;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
@@ -31,6 +34,7 @@ import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Waterlogged;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import static com.cavetale.structure.StructurePlugin.structureCache;
 import static java.util.Collections.sort;
@@ -40,6 +44,7 @@ import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 
+@Getter
 public final class ResourcePlugin extends JavaPlugin {
     // Put in this array all known biomes belonging to dimensions
     // which are not supported by this plugin.
@@ -110,6 +115,7 @@ public final class ResourcePlugin extends JavaPlugin {
                          + " isMineServer=" + isMineServer
                          + " doMineReset=" + doMineReset
                          + " worlds=" + worldNames);
+        new MenuListener(this).enable();
     }
 
     @Override
@@ -269,7 +275,31 @@ public final class ResourcePlugin extends JavaPlugin {
                 getLogger().warning("Biome group is empty: " + name);
                 continue;
             }
-            biomeGroups.add(new BiomeGroup(name, biomes));
+            final String iconName = section.getString("Icon");
+            ItemStack icon;
+            if (iconName == null) {
+                icon = new ItemStack(Material.STONE);
+            } else if (!iconName.contains(":") || iconName.startsWith("minecraft:")) {
+                try {
+                    icon = Bukkit.getItemFactory().createItemStack(iconName);
+                    icon = Items.iconize(icon);
+                } catch (IllegalArgumentException iae) {
+                    getLogger().severe("config.yml: Unknown Minecraft item: " + iconName);
+                    icon = new ItemStack(Material.STICK);
+                }
+            } else if (iconName.startsWith("mytems:")) {
+                final Mytems mytems = Mytems.forId(iconName.substring(7));
+                if (mytems == null) {
+                    getLogger().severe("config.yml: Unknown Mytems item: " + iconName);
+                    icon = Mytems.QUESTION_MARK.createIcon();
+                } else {
+                    icon = mytems.createIcon();
+                }
+            } else {
+                icon = new ItemStack(Material.STONE);
+                getLogger().severe("config.yml: Unknown icon name: " + iconName);
+            }
+            biomeGroups.add(new BiomeGroup(name, biomes, icon));
         }
         sort(biomeGroups, comparing(BiomeGroup::getName));
         if (!excludedBiomes.isEmpty()) {

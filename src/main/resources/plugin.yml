@@ -8,8 +8,11 @@ description: Warp to resource biomes
 author: StarTux
 website: https://cavetale.com
 
-depend: [Core]
-softdepend: [Structure]
+depend:
+- Core
+- Mytems
+softdepend:
+- Structure
 
 commands:
 

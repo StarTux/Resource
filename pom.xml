@@ -53,6 +53,14 @@
       <scope>provided</scope>
     </dependency>
 
+    <!-- Mytems -->
+    <dependency>
+      <groupId>com.cavetale.mytems</groupId>
+      <artifactId>mytems</artifactId>
+      <version>0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+
     <!-- Structure -->
     <dependency>
       <groupId>com.cavetale.structure</groupId>
