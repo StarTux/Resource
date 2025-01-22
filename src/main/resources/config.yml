@@ -135,3 +135,7 @@ Biomes:
   Biomes:
   - CRIMSON_FOREST
   - WARPED_FOREST
+- Name: Pale Garden
+  Icon: pale_oak_log
+  Biomes:
+  - PALE_GARDEN
