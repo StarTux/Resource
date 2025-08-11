@@ -2,7 +2,7 @@ main: com.winthier.resource.ResourcePlugin
 name: Resource
 
 version: 0.1
-api-version: '1.21'
+api-version: '1.21.8'
 
 description: Warp to resource biomes
 author: StarTux
