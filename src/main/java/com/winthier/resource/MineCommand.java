@@ -43,6 +43,10 @@ public final class MineCommand extends AbstractCommand<ResourcePlugin> {
             Connect.get().dispatchRemoteCommand(player.getPlayer(), "mine " + String.join(" ", args), plugin.mineServerName);
             return true;
         }
+        if (player.isPlayer() && args.length == 1 && args[0].equals("menu")) {
+            new BiomesMenu(plugin, player.getPlayer()).open();
+            return true;
+        }
         final String command = args.length > 0
             ? String.join(" ", args)
             : null;
