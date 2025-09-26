@@ -12,6 +12,7 @@ import java.util.List;
 import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import static net.kyori.adventure.text.Component.empty;
 import static net.kyori.adventure.text.Component.join;
 import static net.kyori.adventure.text.Component.newline;
@@ -36,15 +37,14 @@ public final class MineCommand extends AbstractCommand<ResourcePlugin> {
         rootNode.arguments("[biome]").description("Warp to a mining biome")
             .completers(CommandArgCompleter.supplyIgnoreCaseList(this::listBiomeNames))
             .remotePlayerCaller(this::mine);
+        rootNode.addChild("menu").denyTabCompletion()
+            .hidden(true)
+            .playerCaller(this::menu);
     }
 
     protected boolean mine(RemotePlayer player, String[] args) {
         if (!plugin.isMineServer && player.isPlayer()) {
             Connect.get().dispatchRemoteCommand(player.getPlayer(), "mine " + String.join(" ", args), plugin.mineServerName);
-            return true;
-        }
-        if (player.isPlayer() && args.length == 1 && args[0].equals("menu")) {
-            new BiomesMenu(plugin, player.getPlayer()).open();
             return true;
         }
         final String command = args.length > 0
@@ -172,5 +172,9 @@ public final class MineCommand extends AbstractCommand<ResourcePlugin> {
         }
         result.add("end");
         return result;
+    }
+
+    private void menu(Player player) {
+        new BiomesMenu(plugin, player).open();
     }
 }

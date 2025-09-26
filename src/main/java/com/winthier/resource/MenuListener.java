@@ -30,7 +30,7 @@ public final class MenuListener implements Listener {
         event.addItem(builder -> builder
                       .priority(MenuItemEntry.Priority.REGULAR)
                       .key(MENU_KEY)
-                      .icon(Mytems.RUBY.createIcon(List.of(text("Mining World", RED)))));
+                      .icon(Mytems.HASTY_PICKAXE.createIcon(List.of(text("Mining World", GOLD)))));
     }
 
     @EventHandler
