@@ -15,6 +15,7 @@ Biomes:
   - FLOWER_FOREST
   - OLD_GROWTH_BIRCH_FOREST
   - WINDSWEPT_FOREST
+  - DAPPLED_FOREST
 - Name: Windswept
   Icon: wind_charge
   Biomes:
